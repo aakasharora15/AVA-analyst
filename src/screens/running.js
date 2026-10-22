@@ -1,5 +1,5 @@
 import { html } from '../lib/html.js';
-import { getRun, getCompany, setRunDebug } from '../data/repo.js';
+import { MODE, getRun, getCompany, setRunDebug, notifyOnComplete } from '../data/repo.js';
 import { AGENTS } from '../engine/config.js';
 import { fmtDate, sevTag } from '../components/ui.js';
 import { toast } from '../components/sheet.js';
@@ -90,7 +90,7 @@ export default {
     <h1 class="page-title">${company.title}</h1>
     <p class="muted page-sub" aria-live="polite" data-run-summary>Results appear here as each agent finishes. The audit keeps running if you leave this page.</p>
   </div>
-  <details class="card run-debug">
+  ${MODE === 'mock' ? html`<details class="card run-debug">
     <summary>Debug: simulate a failure</summary>
     <div class="stack-md">
       <div class="fld"><label for="dbg-agent">Agent to fail</label>
@@ -98,7 +98,7 @@ export default {
       <label class="check"><input type="checkbox" data-dbg-retry><span class="check-copy"><span>Retry fails too</span><span class="hint">Shows the Partial state, or Failed for the Orchestrator.</span></span></label>
       <button type="button" class="btn" data-dbg-apply>Apply</button>
     </div>
-  </details>
+  </details>` : ''}
 </div>
 <div data-live>${liveView(run)}</div>
 <div class="row-actions">
@@ -136,9 +136,10 @@ export default {
       ctx.navigate(`/report/${id}`, { replace: true });
       return null;
     }
-    timer = setInterval(tick, 500);
+    // Live audits take minutes; poll gently.
+    timer = setInterval(tick, MODE === 'mock' ? 500 : 2500);
 
-    root.querySelector('[data-dbg-apply]').addEventListener('click', async () => {
+    root.querySelector('[data-dbg-apply]')?.addEventListener('click', async () => {
       const ok = await setRunDebug(id, {
         failAgent: root.querySelector('[data-dbg-agent]').value || null,
         failRetry: root.querySelector('[data-dbg-retry]').checked,
@@ -146,8 +147,11 @@ export default {
       toast(ok ? 'Debug failure set.' : 'That agent has already started. Pick a later one.');
     });
     const notify = root.querySelector('[data-notify]');
-    notify.addEventListener('click', () => {
+    notify.addEventListener('click', async () => {
       const on = notify.getAttribute('aria-pressed') !== 'true';
+      if (on) {
+        try { await notifyOnComplete(id); } catch (err) { toast(err.message); return; }
+      }
       notify.setAttribute('aria-pressed', String(on));
       notify.textContent = on ? 'You will be notified' : 'Notify me when done';
       toast(on ? 'We will notify you in app and by email when the audit finishes.' : 'Notification cancelled.');

@@ -286,6 +286,7 @@ create table public.share_links (
   recipient_email text not null,
   expires_at date not null default current_date + 14,
   password_hash text,
+  has_password boolean generated always as (password_hash is not null) stored,
   revoked boolean not null default false,
   created_by uuid not null references auth.users (id),
   created_at timestamptz not null default now()
@@ -704,3 +705,6 @@ create policy audit_log_read on public.audit_log for select using (app.member_ro
 grant usage on schema public to authenticated, anon, service_role;
 grant select, insert, update, delete on all tables in schema public to authenticated, service_role;
 grant usage, select on all sequences in schema public to authenticated, service_role;
+-- Members see whether a share link has a password, never its hash.
+revoke select on public.share_links from authenticated;
+grant select (token, org_id, audit_id, recipient_email, expires_at, has_password, revoked, created_by, created_at) on public.share_links to authenticated;

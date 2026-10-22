@@ -14,6 +14,7 @@ export default {
   async load(ctx) {
     const companies = await getCompanies();
     const companyId = ctx.query.get('company') || SAMPLE.companyId;
+    if (!companyId) throw new Error('Add a company to your portfolio first.');
     return { companies, companyId, sources: (await getSources(companyId)).filter((s) => s.type === 'uploaded') };
   },
 
@@ -68,7 +69,7 @@ export default {
     const doUpload = async (list) => {
       if (!list.length) return;
       try {
-        await uploadFiles(companyId, [...list].map((f) => ({ name: f.name, size: f.size })));
+        await uploadFiles(companyId, [...list]);
         toast(`${list.length} file${list.length === 1 ? '' : 's'} uploaded. Reading now.`);
         ctx.refresh();
         setTimeout(() => ctx.refresh(), 2700);

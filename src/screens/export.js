@@ -98,6 +98,7 @@ export default {
       return { mode, org, companies, alerts, outcomes };
     }
     const id = ctx.query.get('audit') || SAMPLE.auditId;
+    if (!id) throw new Error('There is nothing to export yet. Run an audit first.');
     const a = await getAudit(id);
     if (!a || a.score == null) throw new Error('This audit cannot be exported: it has no score.');
     return { mode, org, companies, a };

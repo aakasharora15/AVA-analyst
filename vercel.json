@@ -4,17 +4,41 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/index.py": { "maxDuration": 300, "includeFiles": "{ava_server,config}/**" }
+    "api/index.py": {
+      "maxDuration": 300,
+      "includeFiles": "{ava_server,config}/**"
+    }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/((?!api/|assets/|icons/|manifest\\.webmanifest).*)", "destination": "/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/((?!api/|assets/|icons/|manifest\\.webmanifest).*)",
+      "destination": "/index.html"
+    }
   ],
   "crons": [
-    { "path": "/api/cron/advance", "schedule": "* * * * *" },
-    { "path": "/api/cron/email", "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/cadence", "schedule": "17 6 * * *" },
-    { "path": "/api/cron/shadow", "schedule": "41 3 * * *" },
-    { "path": "/api/cron/digest", "schedule": "23 8 * * 1" }
+    {
+      "path": "/api/cron/cadence",
+      "schedule": "17 6 * * *"
+    },
+    {
+      "path": "/api/cron/shadow",
+      "schedule": "41 3 * * *"
+    },
+    {
+      "path": "/api/cron/digest",
+      "schedule": "23 8 * * 1"
+    },
+    {
+      "path": "/api/cron/email",
+      "schedule": "9 7 * * *"
+    },
+    {
+      "path": "/api/cron/advance",
+      "schedule": "33 5 * * *"
+    }
   ]
 }

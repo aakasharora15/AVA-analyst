@@ -44,10 +44,15 @@ async function render(route, ctx, previous) {
   if (previous) previous();
   const screen = route.screen;
 
-  if (route.layout === 'app') {
+  if (route.layout === 'app' || route.auth) {
     const session = await getSession();
     if (!session.signedIn) {
       ctx.navigate(`/sign-in?next=${encodeURIComponent(ctx.path + window.location.search)}`, { replace: true });
+      return () => {};
+    }
+    // Signed in but not yet in an organisation: set one up first.
+    if (!session.onboarded && route.layout === 'app') {
+      ctx.navigate('/onboarding', { replace: true });
       return () => {};
     }
   }

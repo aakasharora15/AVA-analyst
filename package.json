@@ -2,7 +2,7 @@
   "name": "ava-analyst",
   "private": true,
   "version": "0.1.0",
-  "description": "AVA (Adversarial Venture Analyst): clickable front-end prototype",
+  "description": "AVA (Adversarial Venture Analyst): web app, API and Supabase schema",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,11 +10,19 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "mock": "node scripts/generate-mock.mjs"
+    "mock": "node scripts/generate-mock.mjs",
+    "dev:live": "VITE_AVA_DATA=live vite",
+    "api": ".venv/bin/uvicorn ava_server.app:app --reload --port 8000",
+    "test:api": "bash -c 'eval \"$(scripts/test-db.sh)\" && .venv/bin/python -m pytest tests_py -q'",
+    "seed": "node scripts/generate-seed.mjs"
   },
   "devDependencies": {
     "jsdom": "^29.1.1",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.2",
+    "pdfjs-dist": "6.3.289"
   }
 }

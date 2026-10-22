@@ -156,7 +156,7 @@ export default {
     form.addEventListener('input', update);
     form.addEventListener('change', update);
     root.querySelector('[data-files]').addEventListener('change', (e) => {
-      files = [...e.target.files].map((f) => ({ name: f.name, size: f.size }));
+      files = [...e.target.files];
       root.querySelector('[data-file-list]').innerHTML = String(html`${files.map((f) => html`<li>${f.name}</li>`)}`);
       update();
     });

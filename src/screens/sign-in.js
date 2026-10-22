@@ -1,9 +1,12 @@
 import { html } from '../lib/html.js';
-import { signIn } from '../data/repo.js';
+import { MODE, signIn, signUp, getSession, requestPasswordReset, updatePassword, signInWithSso, resendVerification } from '../data/repo.js';
 import { wordmarkSvg } from '../components/logo.js';
 
-// Auth states (spec 4.12). In this prototype each state can be opened with
-// ?state=<name> so the flows can be reviewed.
+// Auth states (spec 4.12), opened with ?state=<name>. In the demo (mock data)
+// every state can be opened directly so the flows can be reviewed; live, the
+// same states are reached from Supabase Auth.
+const demo = MODE === 'mock';
+
 const STATES = {
   verify: { title: 'Check your email.', body: 'We sent a verification link to your work email. It expires in 24 hours.', action: 'Resend link' },
   forgot: { title: 'Reset your password.', body: 'Enter your work email and we will send a reset link.' },
@@ -25,6 +28,7 @@ function panel(ctx) {
       ${state === 'forgot' ? html`<form class="stack-md" data-forgot novalidate><div class="fld"><label for="fg-email">Work email</label><input id="fg-email" type="email" class="inp" autocomplete="email"></div><button type="submit" class="btn btn-primary">Send reset link</button></form>` : ''}
       ${state === 'reset' ? html`<form class="stack-md" data-reset novalidate><div class="fld"><label for="rs-pass">New password</label><input id="rs-pass" type="password" class="inp" autocomplete="new-password" minlength="12" aria-describedby="rs-err"><span class="err" id="rs-err" data-rs-err></span></div><button type="submit" class="btn btn-primary">Save password</button></form>` : ''}
       ${s.action ? html`<button type="button" class="btn" data-resend>${s.action}</button>` : ''}
+      <span class="err" role="alert" data-state-err></span>
       <a class="link small" href="/sign-in">Back to sign in</a>
     </div>`;
   }
@@ -36,13 +40,13 @@ function panel(ctx) {
     <div class="si-or"><span></span><span class="lbl">or with email</span><span></span></div>
     <form class="stack-md" data-signin novalidate>
       ${isIn ? '' : html`<div class="fld"><label for="s-name">Full name</label><input id="s-name" class="inp" autocomplete="name"></div><div class="fld"><label for="s-org">Organisation</label><input id="s-org" class="inp" autocomplete="organization" placeholder="Fund, team or accelerator"></div>`}
-      <div class="fld"><label for="s-email">Work email</label><input id="s-email" type="email" class="inp" autocomplete="email" value="alex@yourfund.example" aria-describedby="s-err"></div>
-      <div class="fld"><label for="s-pass">Password</label><input id="s-pass" type="password" class="inp" autocomplete="${isIn ? 'current-password' : 'new-password'}" value="${isIn ? 'prototype-only' : ''}"></div>
+      <div class="fld"><label for="s-email">Work email</label><input id="s-email" type="email" class="inp" autocomplete="email" value="${demo ? 'alex@yourfund.example' : ''}" aria-describedby="s-err"></div>
+      <div class="fld"><label for="s-pass">Password</label><input id="s-pass" type="password" class="inp" autocomplete="${isIn ? 'current-password' : 'new-password'}" value="${isIn && demo ? 'prototype-only' : ''}"${isIn ? '' : html` minlength="12" aria-describedby="s-pass-hint"`}>${isIn ? '' : html`<span class="hint" id="s-pass-hint">At least 12 characters.</span>`}</div>
       <span class="err" id="s-err" role="alert" data-err></span>
-      <button type="submit" class="btn btn-primary btn-lg">${isIn ? 'Sign in' : 'Create account'}</button>
+      <button type="submit" class="btn btn-primary btn-lg" data-submit>${isIn ? 'Sign in' : 'Create account'}</button>
       ${isIn ? html`<a class="link small" href="/sign-in?state=forgot">Forgot password?</a>` : html`<p class="hint">[TERMS] and [PRIVACY] apply. We will send a link to verify your email.</p>`}
     </form>
-    <p class="small muted">Invited by a colleague? Use the link in your invitation email. Prototype: the sample account is filled in.</p>
+    <p class="small muted">Invited by a colleague? Use the link in your invitation email.${demo ? ' Demo: the sample account is filled in.' : ''}</p>
   </div>`;
 }
 
@@ -65,34 +69,76 @@ export default {
   mount(root, ctx) {
     const ac = new AbortController();
     const opts = { signal: ac.signal };
+    const after = async () => {
+      const session = await getSession();
+      ctx.navigate(session.onboarded ? (ctx.query.get('next') || '/portfolio') : '/onboarding');
+    };
+    const busy = (f, on) => { const b = f.querySelector('[type="submit"]'); if (b) b.disabled = on; };
     root.addEventListener('submit', async (e) => {
       e.preventDefault();
       const f = e.target;
       if (f.matches('[data-signin]')) {
         const email = f.querySelector('#s-email');
+        const pass = f.querySelector('#s-pass');
+        const err = root.querySelector('[data-err]');
+        err.textContent = '';
         if (!/^\S+@\S+\.\S+$/.test(email.value.trim())) {
-          root.querySelector('[data-err]').textContent = 'Enter your work email to continue.';
+          err.textContent = 'Enter your work email to continue.';
           email.setAttribute('aria-invalid', 'true');
           email.focus();
           return;
         }
-        if (ctx.query.get('mode') === 'up') { ctx.navigate('/sign-in?state=verify'); return; }
-        await signIn(email.value.trim());
-        ctx.navigate(ctx.query.get('next') || '/portfolio');
+        email.setAttribute('aria-invalid', 'false');
+        const up = ctx.query.get('mode') === 'up';
+        if (!demo && !pass.value) { err.textContent = 'Enter your password.'; pass.focus(); return; }
+        busy(f, true);
+        try {
+          if (up) {
+            await signUp({ name: f.querySelector('#s-name').value.trim(), org: f.querySelector('#s-org').value.trim(), email: email.value.trim(), password: pass.value });
+            ctx.navigate(`/sign-in?state=verify&email=${encodeURIComponent(email.value.trim())}`);
+            return;
+          }
+          await signIn(email.value.trim(), pass.value);
+          await after();
+        } catch (ex) {
+          err.textContent = ex.message;
+        } finally { busy(f, false); }
       }
-      if (f.matches('[data-forgot]')) ctx.navigate('/sign-in?state=reset-sent');
+      if (f.matches('[data-forgot]')) {
+        const email = f.querySelector('#fg-email').value.trim();
+        busy(f, true);
+        try { await requestPasswordReset(email); } catch { /* same message either way: never reveal whether an account exists */ }
+        ctx.navigate(`/sign-in?state=reset-sent&email=${encodeURIComponent(email)}`);
+      }
       if (f.matches('[data-reset]')) {
         const p = f.querySelector('#rs-pass');
-        if (p.value.length < 12) { root.querySelector('[data-rs-err]').textContent = 'Use at least 12 characters.'; p.focus(); return; }
-        ctx.navigate('/sign-in');
+        const err = root.querySelector('[data-rs-err]');
+        if (p.value.length < 12) { err.textContent = 'Use at least 12 characters.'; p.focus(); return; }
+        busy(f, true);
+        try {
+          const r = await updatePassword(p.value);
+          if (r && r.state) { ctx.navigate(`/sign-in?state=${r.state}`); return; }
+          if (demo) ctx.navigate('/sign-in'); else await after();
+        } catch (ex) { err.textContent = ex.message; } finally { busy(f, false); }
       }
     }, opts);
-    root.addEventListener('click', (e) => {
+    root.addEventListener('click', async (e) => {
       if (e.target.closest('[data-sso]')) {
         const email = root.querySelector('#s-email');
-        ctx.navigate(/yourfund\.example$/.test(email ? email.value : '') ? '/sign-in?state=sso-not-configured' : '/sign-in?state=sso-error');
+        const r = await signInWithSso(email ? email.value.trim() : '');
+        if (r.state !== 'redirecting') ctx.navigate(`/sign-in?state=${r.state}`);
       }
-      if (e.target.closest('[data-resend]')) e.target.closest('[data-resend]').textContent = 'Sent. Check your inbox.';
+      const resend = e.target.closest('[data-resend]');
+      if (resend) {
+        const state = ctx.query.get('state');
+        const email = ctx.query.get('email') || '';
+        if (state === 'reset-expired' || (!email && state !== 'verify')) { ctx.navigate('/sign-in?state=forgot'); return; }
+        try {
+          if (state === 'verify') await resendVerification(email);
+          else await requestPasswordReset(email);
+          resend.textContent = 'Sent. Check your inbox.';
+        } catch (ex) { root.querySelector('[data-state-err]').textContent = ex.message; }
+      }
     }, opts);
     return () => ac.abort();
   },

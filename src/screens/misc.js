@@ -1,7 +1,7 @@
 // Guest share view, invite acceptance, error pages and placeholder legal pages.
 
 import { html } from '../lib/html.js';
-import { openSharedReport, getUsers, getOrg } from '../data/repo.js';
+import { openSharedReport, getUsers, getOrg, getInvite, acceptInvite, getSession } from '../data/repo.js';
 import { reportBody } from './report.js';
 import { logo } from '../components/logo.js';
 import { fmtDate } from '../components/ui.js';
@@ -44,13 +44,27 @@ export const shared = {
 export const invite = {
   title: 'Accept invite · AVA',
   className: 'invite',
-  async load(ctx) { return { users: await getUsers(), org: await getOrg(), token: ctx.params.token }; },
-  render(ctx, { users, org, token }) {
-    const u = users.find((x) => x.id === token && x.status === 'invited');
-    if (!u || (u.inviteExpires && u.inviteExpires < new Date().toISOString().slice(0, 10))) {
-      return simple({ label: 'Invite', title: 'This invite has expired.', body: html`<p>Invites last 7 days. Ask the person who invited you to send a new one.</p>`, actions: [{ href: '/sign-in', label: 'Sign in' }] });
+  async load(ctx) { return { inv: await getInvite(ctx.params.token), session: await getSession() }; },
+  render(ctx, { inv, session }) {
+    if (!inv || inv.expired || inv.accepted) {
+      return simple({ label: 'Invite', title: inv && inv.accepted ? 'This invite has already been used.' : 'This invite has expired.', body: html`<p>Invites last 7 days. Ask the person who invited you to send a new one.</p>`, actions: [{ href: '/sign-in', label: 'Sign in' }] });
     }
-    return simple({ label: 'Invite', title: `Join ${org.name} on AVA`, body: html`<p>You have been invited as ${u.role} with ${u.email}. Create an account or sign in to accept.</p>`, actions: [{ href: '/sign-in?mode=up', label: 'Create account' }, { href: '/sign-in', label: 'Sign in' }] });
+    const here = encodeURIComponent(ctx.path);
+    if (session.signedIn && session.user && session.user.email.toLowerCase() === inv.email.toLowerCase()) {
+      return html`${simple({ label: 'Invite', title: `Join ${inv.org} on AVA`, body: html`<p>You have been invited as ${inv.role}. Accepting adds you to ${inv.org}.</p><span class="err" role="alert" data-inv-err></span>` })}
+<div class="row-actions"><button type="button" class="btn btn-primary" data-accept>Accept and open the portfolio</button></div>`;
+    }
+    return simple({ label: 'Invite', title: `Join ${inv.org} on AVA`, body: html`<p>You have been invited as ${inv.role} with ${inv.email}. Create an account or sign in with that email to accept.</p>`, actions: [{ href: `/sign-in?mode=up&next=${here}`, label: 'Create account' }, { href: `/sign-in?next=${here}`, label: 'Sign in' }] });
+  },
+  mount(root, ctx) {
+    const btn = root.querySelector('[data-accept]');
+    if (btn) {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try { await acceptInvite(ctx.params.token); ctx.navigate('/portfolio'); } catch (err) { root.querySelector('[data-inv-err]').textContent = err.message; btn.disabled = false; }
+      });
+    }
+    return null;
   },
 };
 

@@ -28,7 +28,7 @@ from pydantic import BaseModel, Field
 
 from . import db, drift, emailer, lifecycle, scheduling
 from .auth import cron_guard, current_user
-from .config import SECTIONS, settings
+from .config import settings
 
 app = FastAPI(title="AVA API", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -187,6 +187,21 @@ def rescore_result(audit_id: str, user: str = Depends(current_user)):
     return {"pending": bool(pending), "result": r}
 
 
+class ExportIn(BaseModel):
+    detail: str = Field(min_length=1, max_length=500)
+
+
+@app.post("/api/audits/{audit_id}/export")
+def record_export(audit_id: str, body: ExportIn, user: str = Depends(current_user)):
+    """Exports are logged like every other action (spec 4.10)."""
+    a = _audit_org(audit_id)
+    _need(user, a["org_id"], MEMBERS)
+    with db.system() as c:
+        c.execute("insert into audit_log (org_id, user_id, who, action, object_type, object_id, detail) values (%s, %s, %s, 'export.pdf', 'audits', %s, %s)",
+                  (a["org_id"], user, _profile_name(c, user), audit_id, body.detail))
+    return {"ok": True}
+
+
 # ---------------------------------------------------------------------------
 # Findings workflow (spec 4.2)
 
@@ -211,6 +226,14 @@ def _profile_name(c, user: str) -> str:
     return (p["name"] or p["email"]) if p else "Someone"
 
 
+STATUS_LABEL = {"open": "Open", "accepted": "Accepted", "dismissed": "Dismissed", "resolved": "Resolved"}
+
+
+def _now_iso() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
+
+
 class StatusIn(BaseModel):
     status: str = Field(pattern="^(open|accepted|dismissed|resolved)$")
     reason: str | None = None
@@ -225,9 +248,9 @@ def finding_status(finding_id: str, body: StatusIn, user: str = Depends(current_
         if not f:
             raise HTTPException(404, "Not found")
         who = _profile_name(c, user)
-        entry = {"at": date.today().isoformat(), "who": who, "from": f["status"], "to": body.status}
-        if body.reason:
-            entry["reason"] = body.reason.strip()
+        # Same shape as the front end's finding history: {at, by, action, detail}.
+        entry = {"at": _now_iso(), "by": who, "action": STATUS_LABEL[body.status],
+                 "detail": body.reason.strip() if body.status == "dismissed" else ("Restored" if f["status"] == "dismissed" else None)}
         updated = c.execute(
             "update findings set status = %s, dismiss_reason = %s, history = history || %s::jsonb where id = %s returning id",
             (body.status, body.reason.strip() if body.status == "dismissed" and body.reason else None, db.jsonb([entry]), finding_id)).fetchone()
@@ -242,8 +265,11 @@ class OwnerIn(BaseModel):
 
 @app.post("/api/findings/{finding_id}/owner")
 def finding_owner(finding_id: str, body: OwnerIn, user: str = Depends(current_user)):
+    owner = (body.owner or "").strip() or None
     with db.as_user(user) as c:
-        updated = c.execute("update findings set owner = %s where id = %s returning id", ((body.owner or "").strip() or None, finding_id)).fetchone()
+        entry = {"at": _now_iso(), "by": _profile_name(c, user), "action": f"Assigned to {owner}" if owner else "Unassigned"}
+        updated = c.execute("update findings set owner = %s, history = history || %s::jsonb where id = %s returning id",
+                            (owner, db.jsonb([entry]), finding_id)).fetchone()
     if not updated:
         raise HTTPException(403, "Your role does not allow this")
     return {"ok": True}
@@ -357,16 +383,20 @@ _SHARED_FINDING_COLS = "id, agent, section, category, severity, title, text, sou
 def shared_view(token: str, body: SharedIn | None = None):
     with db.system("Guest") as c:
         s = c.execute("select * from share_links where token = %s", (token,)).fetchone()
-        if not s or s["revoked"]:
-            raise HTTPException(410, "This link has been revoked. Ask the sender for a new one.")
+        if not s:
+            return JSONResponse({"state": "missing", "error": "This link does not exist."}, status_code=404)
+        if s["revoked"]:
+            return JSONResponse({"state": "revoked", "error": "This link has been revoked. Ask the sender for a new one."}, status_code=410)
         if s["expires_at"] < date.today():
-            raise HTTPException(410, "This link has expired. Ask the sender for a new one.")
+            return JSONResponse({"state": "expired", "error": "This link has expired. Ask the sender for a new one.",
+                                 "link": {"expires": s["expires_at"].isoformat()}}, status_code=410)
         if s["password_hash"]:
-            if not body or not body.password:
-                raise HTTPException(401, "This report is password protected")
-            if not _check_password(body.password, s["password_hash"]):
-                time.sleep(0.5)
-                raise HTTPException(401, "That password is not right")
+            ok = bool(body and body.password) and _check_password(body.password, s["password_hash"])
+            if not ok:
+                if body and body.password:
+                    time.sleep(0.5)
+                return JSONResponse({"state": "password", "error": "This report is password protected", "link": {"email": s["recipient_email"]}},
+                                    status_code=401)
         a = c.execute(
             "select id, date, status, score, base_directive, final_directive, overridden, override, coverage, skipped_sections, orchestrator, "
             "exposure, cap, model_version, prompt_version, calibration_version, under_review, company_id, org_id from audits where id = %s",
@@ -378,8 +408,8 @@ def shared_view(token: str, body: SharedIn | None = None):
         sources = c.execute("select id, type, title, kind, date, reliability, url, retrieval_date from sources where id = any(%s)", (src_ids,)).fetchall()
         c.execute("insert into share_views (token) values (%s)", (token,))
     a = {k: v for k, v in a.items() if k not in ("org_id",)}
-    return {"audit": a, "company": co, "org": org, "findings": findings, "sources": sources,
-            "expiresAt": s["expires_at"].isoformat(), "sections": SECTIONS}
+    return {"state": "ok", "audit": a, "company": co, "org": org, "findings": findings, "sources": sources,
+            "link": {"email": s["recipient_email"], "expires": s["expires_at"].isoformat()}}
 
 
 # ---------------------------------------------------------------------------
@@ -546,6 +576,9 @@ def create_org(body: OrgIn, user: str = Depends(current_user)):
 # then registers it here as a source.
 
 
+NO_TEXT_NOTE = "Stored. Text could not be read from this format, so agents will not cite it yet."
+
+
 class FileIn(BaseModel):
     title: str = Field(min_length=1, max_length=300)
     kind: str = "File"
@@ -572,8 +605,14 @@ def add_file(company_id: str, body: FileIn, user: str = Depends(current_user)):
         sid = c.execute(
             "insert into sources (org_id, company_id, type, title, kind, note, storage_path, content_hash, extract, added_by, coverage_topic, created_by) "
             "values (%s, %s, 'uploaded', %s, %s, %s, %s, %s, %s, %s, %s, %s) returning id",
-            (co["org_id"], company_id, body.title.strip(), body.kind, body.note or (text[:280] if text else ""), body.storagePath, digest, text,
+            (co["org_id"], company_id, body.title.strip(), body.kind, body.note or (text[:280] if text else NO_TEXT_NOTE), body.storagePath, digest, text,
              _profile_name(c, user), body.coverageTopic, user)).fetchone()["id"]
+    with db.system() as c:
+        # Evidence alert (spec 4.7), when the organisation has it switched on.
+        org = c.execute("select alert_rules from organisations where id = %s", (co["org_id"],)).fetchone()
+        if (org["alert_rules"] or {}).get("evidence"):
+            c.execute("insert into alerts (org_id, company_id, trigger, detail) values (%s, %s, 'evidence', %s)",
+                      (co["org_id"], company_id, f"New file added: {body.title.strip()}"))
     audit_id = lifecycle.create_audit(user, company_id, trigger="evidence") if body.reaudit else None
     return {"sourceId": sid, "auditId": audit_id, "extracted": bool(text)}
 
@@ -640,7 +679,7 @@ def free_result(fid: str):
     if st["audit"]["status"] in ("complete", "partial"):
         with db.system() as c:
             a = c.execute("select score, final_directive, coverage from audits where id = %s", (f["audit_id"],)).fetchone()
-            fs = c.execute("select id, section, category, severity, title, text from findings where audit_id = %s", (f["audit_id"],)).fetchall()
+            fs = c.execute("select id, agent, section, category, severity, title, text from findings where audit_id = %s", (f["audit_id"],)).fetchall()
         fs.sort(key=lambda x: (SEV_ORDER[x["severity"]], x["title"]))
         locked = fs[3:]
         out.update({"score": a["score"], "directive": a["final_directive"], "coverage": a["coverage"], "top": fs[:3],
@@ -648,15 +687,23 @@ def free_result(fid: str):
     return out
 
 
+class FreeSendIn(BaseModel):
+    to: str = Field(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
 @app.post("/api/free-audit/{fid}/send")
-def free_send(fid: str):
+def free_send(fid: str, body: FreeSendIn):
+    """'Founder? Send this result to an investor.' Once per result."""
     f = _free(fid)
     r = free_result(fid)
     if r["status"] not in ("complete", "partial"):
         raise HTTPException(409, "The audit is still running")
     lines = [f"{x['severity']}: {x['title']}\n{x['text']}" for x in r["top"]]
     with db.system() as c:
-        emailer.queue(c, None, f["email"], f"Your free AVA audit: {r['company']['title']}",
+        if c.execute("select 1 from email_outbox where kind = 'free-audit' and subject like %s", (f"%[{fid}]",)).fetchone():
+            raise HTTPException(409, "This result has already been sent")
+        emailer.queue(c, None, body.to, f"{f['email']} shared a free AVA audit: {r['company']['title']} [{fid}]",
+                      f"{f['email']} ran a free AVA audit and shared the result with you.\n\n"
                       f"Resilience score {r['score']}. Directive {r['directive']}.\n\nTop findings:\n\n" + "\n\n".join(lines)
                       + f"\n\n{r['locked']['total']} more findings are in the full report.\nSee plans: {settings().app_url}/pricing", "free-audit")
     return {"ok": True}

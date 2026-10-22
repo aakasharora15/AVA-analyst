@@ -13,6 +13,7 @@ export default {
   async load(ctx) {
     const companies = await getCompanies();
     const companyId = ctx.query.get('company') || SAMPLE.companyId;
+    if (!companyId) throw new Error('Add a company to your portfolio first.');
     return { companies, companyId, sources: await getSources(companyId) };
   },
 

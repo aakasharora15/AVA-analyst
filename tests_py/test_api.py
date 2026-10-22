@@ -97,7 +97,7 @@ def test_finding_status_dismiss_needs_reason_and_recomputes(api):
     with db.system() as c:
         row = c.execute("select status, history from findings where id = %s", (f,)).fetchone()
         a = c.execute("select score from audits where id = %s", (r["auditId"],)).fetchone()
-    assert row["status"] == "dismissed" and row["history"][-1]["reason"] == "Fixed in Q3"
+    assert row["status"] == "dismissed" and row["history"][-1]["detail"] == "Fixed in Q3" and row["history"][-1]["action"] == "Dismissed"
     assert a["score"] == before["score"]  # the issued score never changes
     assert client.post(f"/api/findings/{f}/comments", json={"text": "Agreed"}, headers=as_(w, "Viewer")).status_code == 200
     assert client.post(f"/api/findings/{f}/owner", json={"owner": "Sam"}, headers=as_(w, "Analyst")).status_code == 200
@@ -107,17 +107,24 @@ def test_share_link_guest_view_password_expiry_and_revoke(api):
     client, w = api
     r = client.post("/api/share", json={"auditId": w["audit"], "email": "lp@partner.example", "password": "pa55word"}, headers=as_(w, "Viewer")).json()
     tok = r["token"]
-    assert client.post(f"/api/shared/{tok}").status_code == 401
+    assert client.post(f"/api/shared/{tok}").json()["state"] == "password"
     assert client.post(f"/api/shared/{tok}", json={"password": "nope"}).status_code == 401
     view = client.post(f"/api/shared/{tok}", json={"password": "pa55word"}).json()
     assert view["audit"]["id"] == w["audit"] and view["findings"] and "comments" not in view
     assert "org_id" not in view["audit"]
+    # Members can tell a link has a password but cannot read its hash.
+    with db.as_user(w["users"]["Viewer"]) as c:
+        assert c.execute("select has_password from share_links where token = %s", (tok,)).fetchone()["has_password"] is True
+    with pytest.raises(Exception, match="permission denied"):
+        with db.as_user(w["users"]["Viewer"]) as c:
+            c.execute("select password_hash from share_links")
     assert client.post(f"/api/share/{tok}/revoke", headers=as_(w, "Admin")).status_code == 200
-    assert client.post(f"/api/shared/{tok}", json={"password": "pa55word"}).status_code == 410
+    assert client.post(f"/api/shared/{tok}", json={"password": "pa55word"}).json()["state"] == "revoked"
     with db.system() as c:
         assert c.execute("select count(*) as n from share_views where token = %s", (tok,)).fetchone()["n"] == 1
         c.execute("update share_links set revoked = false, expires_at = current_date - 1 where token = %s", (tok,))
-    assert client.post(f"/api/shared/{tok}", json={"password": "pa55word"}).status_code == 410
+    assert client.post(f"/api/shared/{tok}", json={"password": "pa55word"}).json()["state"] == "expired"
+    assert client.post("/api/shared/nope").json()["state"] == "missing"
 
 
 def test_import_validates_server_side_and_can_audit_all(api):
@@ -172,7 +179,8 @@ def test_free_audit_work_email_once_per_domain_and_locking(api):
     r = client.get(f"/api/free-audit/{fid}").json()
     assert r["status"] == "complete" and len(r["top"]) == 3 and r["top"][0]["severity"] == "HIGH"
     assert r["locked"]["total"] == 3 and "text" not in str(r["locked"])
-    assert client.post(f"/api/free-audit/{fid}/send").status_code == 200
+    assert client.post(f"/api/free-audit/{fid}/send", json={"to": "vc@fund.example"}).status_code == 200
+    assert client.post(f"/api/free-audit/{fid}/send", json={"to": "vc@fund.example"}).status_code == 409
     with db.system() as c:
         assert c.execute("select status from free_audits where id = %s", (fid,)).fetchone()["status"] == "complete"
 
@@ -181,6 +189,8 @@ def test_data_room_registers_supersedes_and_reaudits(api):
     client, w = api
     body = {"title": "Board pack", "extract": "Revenue grew.", "storagePath": f"{w['org']}/{w['company']}/pack.pdf"}
     assert client.post(f"/api/data-room/{w['company']}/files", json=body, headers=as_(w, "Viewer")).status_code == 403
+    with db.system() as c:
+        c.execute("update organisations set alert_rules = alert_rules || '{\"evidence\": true}' where id = %s", (w["org"],))
     assert client.post(f"/api/data-room/{w['company']}/files", json={**body, "storagePath": "other/x.pdf"}, headers=as_(w, "Analyst")).status_code == 422
     first = client.post(f"/api/data-room/{w['company']}/files", json=body, headers=as_(w, "Analyst")).json()
     second = client.post(f"/api/data-room/{w['company']}/files", json={**body, "extract": "Revenue fell.", "reaudit": True}, headers=as_(w, "Analyst")).json()
@@ -188,6 +198,8 @@ def test_data_room_registers_supersedes_and_reaudits(api):
     with db.system() as c:
         assert c.execute("select status from sources where id = %s", (first["sourceId"],)).fetchone()["status"] == "superseded"
         assert c.execute("select trigger from audits where id = %s", (second["auditId"],)).fetchone()["trigger"] == "evidence"
+        assert c.execute("select count(*) as n from alerts where company_id = %s and trigger = 'evidence'", (w["company"],)).fetchone()["n"] == 2
+    assert client.post(f"/api/audits/{w['audit']}/export", json={"detail": "Exported PDF"}, headers=as_(w, "Viewer")).status_code == 200
 
 
 def test_outcome_logging_and_guard(api):

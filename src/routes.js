@@ -36,7 +36,7 @@ export const routes = [
   { path: '/invite/:token', screen: invite, layout: 'public' },
 
   // App
-  { path: '/onboarding', screen: onboarding, layout: 'bare' },
+  { path: '/onboarding', screen: onboarding, layout: 'bare', auth: true },
   { path: '/portfolio', screen: portfolio, layout: 'app' },
   { path: '/company/:id', screen: company, layout: 'app' },
   { path: '/new-analysis', screen: newAnalysis, layout: 'app' },

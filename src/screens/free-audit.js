@@ -1,33 +1,31 @@
 import { html } from '../lib/html.js';
-import { checkWorkEmail, runFreeAudit } from '../data/repo.js';
+import { checkWorkEmail, runFreeAudit, sendFreeAudit } from '../data/repo.js';
 import { AGENTS } from '../engine/config.js';
 import { meter, sevTag, vClass, icon } from '../components/ui.js';
 import { toast } from '../components/sheet.js';
 import { INDUSTRIES } from './new-analysis.js';
 
-const SEV_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 };
-
+// r.top: the three findings shown in full. r.locked: counts of the rest by
+// severity; their text never reaches the browser.
 function resultView(r) {
-  const sorted = r.findings.slice().sort((a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity]);
-  const top = sorted.slice(0, 3);
-  const locked = sorted.slice(3);
-  const counts = ['HIGH', 'MEDIUM', 'LOW'].map((s) => [s, locked.filter((f) => f.severity === s).length]).filter(([, n]) => n);
+  const { top, locked } = r;
+  const counts = ['HIGH', 'MEDIUM', 'LOW'].map((s) => [s, locked[s]]).filter(([, n]) => n);
   return html`
 <div class="hero-panel fa-score ${vClass(r.directive)}">
   <div class="stars" aria-hidden="true"></div>
   <span class="lbl">Free audit result · ${r.inputs.title}</span>
   <div class="co-nums"><div><div class="lbl">Resilience Score</div><div class="hero-num">${r.score}<span class="r-of"> / 100</span></div></div><div><div class="lbl">Directive</div><div class="hero-dir verdict-text">${r.directive}</div></div></div>
   ${meter(r.score, r.directive)}
-  <span class="small">All six agents ran. Prototype result: the live product runs the full agent chain on your inputs.</span>
+  <span class="small">${r.status === 'partial' ? 'Five of six agents reported. One section did not run, so the directive is capped at HOLD.' : 'All six agents ran.'}${r.prototype ? ' Demo result: the live product runs the full agent chain on your inputs.' : ''}</span>
 </div>
 <div class="card card-pad stack-sm">
   <span class="lbl">Top three findings</span>
   ${top.map((f) => html`<div class="run-finding">${sevTag(f.severity)}<div class="stack-sm"><b>${f.title}</b><span class="small muted">${f.text}</span><span class="row-actions"><span class="lbl">${AGENTS[f.agent - 1].name} · ${f.category}</span><span class="no-source">Agent reasoning, no source</span></span></div></div>`)}
 </div>
 <div class="card card-pad stack-md fa-locked">
-  <div class="row-actions">${icon('lock')}<b>${locked.length} more findings are locked.</b></div>
+  <div class="row-actions">${icon('lock')}<b>${locked.total} more findings are locked.</b></div>
   <div class="chips">${counts.map(([s, n]) => html`<span class="tag sev-${s.toLowerCase()}">${n} ${s}</span>`)}</div>
-  <ul class="fa-ghosts" aria-hidden="true">${locked.slice(0, 3).map(() => html`<li><span></span><span></span></li>`)}</ul>
+  <ul class="fa-ghosts" aria-hidden="true">${Array.from({ length: Math.min(3, locked.total) }, () => html`<li><span></span><span></span></li>`)}</ul>
   <p class="small muted">The full product shows every finding with citations, the score trace, history and a PDF report.</p>
   <div class="row-actions"><a class="btn btn-primary" href="mailto:[SALES EMAIL]?subject=AVA%20walkthrough" data-external>Book a walkthrough</a><a class="btn" href="/pricing">See pricing</a></div>
 </div>
@@ -75,6 +73,7 @@ export default {
     const form = root.querySelector('[data-fa]');
     const out = root.querySelector('[data-result]');
     let tried = false;
+    let result = null;
     const errs = (v) => {
       const mail = checkWorkEmail(v.email || '');
       return {
@@ -103,12 +102,13 @@ export default {
       if (bad.length) { form.elements[bad[0][0]].focus(); return; }
       const btn = form.querySelector('[type="submit"]');
       btn.disabled = true;
-      for (let i = 0; i < AGENTS.length; i += 1) {
+      const paint = (i) => {
         out.innerHTML = String(html`<div class="hero-panel fa-wait"><div class="stars" aria-hidden="true"></div><span class="lbl">Running · ${i + 1} of 6</span><div class="hero-dir">${AGENTS[i].name}</div><div class="run-prog"><span style="width:${Math.round(((i + 1) / 6) * 100)}%"></span></div><p class="small">${AGENTS[i].mandate}</p></div>`);
-        await new Promise((r) => { setTimeout(r, 450); });
-      }
+      };
+      paint(0);
       try {
-        const r = await runFreeAudit(v);
+        const r = await runFreeAudit(v, { onProgress: paint });
+        result = r;
         out.innerHTML = String(resultView(r));
         out.querySelector('.hero-panel').scrollIntoView({ block: 'nearest' });
       } catch (err) {
@@ -116,12 +116,15 @@ export default {
       }
       btn.disabled = false;
     }, { signal: ac.signal });
-    out.addEventListener('submit', (e) => {
+    out.addEventListener('submit', async (e) => {
       e.preventDefault();
       const input = out.querySelector('#fa-inv');
       if (!/^\S+@\S+\.\S+$/.test(input.value.trim())) { input.setAttribute('aria-invalid', 'true'); input.focus(); toast('Enter the investor\'s email.'); return; }
-      toast(`Result sent to ${input.value.trim()}.`);
-      input.value = '';
+      try {
+        await sendFreeAudit(result.id, input.value.trim());
+        toast(`Result sent to ${input.value.trim()}.`);
+        input.value = '';
+      } catch (err) { toast(err.message); }
     }, { signal: ac.signal });
     return () => ac.abort();
   },

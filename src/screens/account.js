@@ -1,7 +1,7 @@
 import { html } from '../lib/html.js';
 import {
   getOrg, updateOrg, getUsers, getCurrentUser, updateProfile, inviteMember, changeRole, removeMember, actAs,
-  getAuditLog, getCompanies, can, signOut, resetDemo,
+  getAuditLog, getCompanies, can, signOut, resetDemo, transferOwnership, MODE,
 } from '../data/repo.js';
 import { fmtDate, fmtDateTime, emptyState, initials } from '../components/ui.js';
 import { openSheet, toast } from '../components/sheet.js';
@@ -24,7 +24,7 @@ function profile(me) {
     <div class="fld"><label for="p-title">Job title</label><input id="p-title" class="inp" name="title" value="${me.title}"></div>
     <div class="fld"><label for="p-email">Work email</label><input id="p-email" type="email" class="inp" name="email" value="${me.email}" autocomplete="email"></div>
   </div>
-  <div class="row-actions"><button type="submit" class="btn btn-primary">Save changes</button><button type="button" class="btn" data-signout>Sign out</button><button type="button" class="btn" data-reset>Reset demo data</button></div>
+  <div class="row-actions"><button type="submit" class="btn btn-primary">Save changes</button><button type="button" class="btn" data-signout>Sign out</button>${MODE === 'mock' ? html`<button type="button" class="btn" data-reset>Reset demo data</button>` : ''}</div>
 </form>`;
 }
 
@@ -78,7 +78,7 @@ function team(users, me) {
     ${Object.entries(ROLE_NOTE).map(([r, n]) => html`<div class="kv"><span>${r}</span><span class="muted">${n}</span></div>`)}
     <span class="muted">External guests see one shared report only. Permissions are enforced server-side in the live product.</span>
   </div>
-  <div class="fld ac-viewas"><label for="view-as">Prototype only: view the app as</label><select id="view-as" class="inp" data-view-as>${users.filter((u) => u.status === 'active').map((u) => html`<option value="${u.id}"${u.id === me.id ? html` selected` : ''}>${u.name} (${u.role})</option>`)}</select></div>
+  ${MODE === 'mock' ? html`<div class="fld ac-viewas"><label for="view-as">Demo only: view the app as</label><select id="view-as" class="inp" data-view-as>${users.filter((u) => u.status === 'active').map((u) => html`<option value="${u.id}"${u.id === me.id ? html` selected` : ''}>${u.name} (${u.role})</option>`)}</select></div>` : ''}
 </section>`;
 }
 
@@ -204,7 +204,7 @@ export default {
         openSheet({
           title: 'Transfer ownership',
           body: html`<p>${u.name} becomes the Owner, with billing and organisation control. You become an Admin. This is logged.</p><div class="row-actions"><button type="button" class="btn btn-primary" data-confirm>Transfer to ${u.name}</button><button type="button" class="btn" data-close>Cancel</button></div>`,
-          onMount(el, close) { el.querySelector('[data-confirm]').addEventListener('click', () => { close(); toast(`Ownership transfer to ${u.name} requested. They must accept by email.`); }); },
+          onMount(el, close) { el.querySelector('[data-confirm]').addEventListener('click', () => { close(); run(() => transferOwnership(u.id), `${u.name} is now the Owner. You are an Admin.`); }); },
         });
       }
     }, opts);
