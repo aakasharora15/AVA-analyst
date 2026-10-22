@@ -1,0 +1,52 @@
+[
+ {
+  "id": "u1",
+  "name": "Alex Morgan",
+  "initials": "AM",
+  "email": "alex@yourfund.example",
+  "role": "Owner",
+  "title": "Investment associate",
+  "status": "active",
+  "lastActive": "2026-10-22"
+ },
+ {
+  "id": "u2",
+  "name": "Jordan Lee",
+  "initials": "JL",
+  "email": "jordan@yourfund.example",
+  "role": "Admin",
+  "title": "Operating partner",
+  "status": "active",
+  "lastActive": "2026-10-20"
+ },
+ {
+  "id": "u3",
+  "name": "Priya Nair",
+  "initials": "PN",
+  "email": "priya@yourfund.example",
+  "role": "Analyst",
+  "title": "Analyst",
+  "status": "active",
+  "lastActive": "2026-10-21"
+ },
+ {
+  "id": "u4",
+  "name": "Daniel Okoye",
+  "initials": "DO",
+  "email": "daniel@yourfund.example",
+  "role": "Viewer",
+  "title": "Partner",
+  "status": "active",
+  "lastActive": "2026-10-18"
+ },
+ {
+  "id": "u5",
+  "name": "Sam Brooks",
+  "initials": "SB",
+  "email": "sam@yourfund.example",
+  "role": "Analyst",
+  "title": "Analyst",
+  "status": "invited",
+  "lastActive": null
+ }
+]

@@ -1,0 +1,449 @@
+[
+ {
+  "id": "northline",
+  "title": "Northline Cold Chain",
+  "description": "Chilled last-mile delivery for independent food retailers across the North of England.",
+  "industry": "Logistics / Supply Chain",
+  "country": "United Kingdom",
+  "city": "Leeds",
+  "model": "Per-drop fee with a monthly minimum",
+  "target": "Independent food retailers within 40 miles of the depot",
+  "type": "startup",
+  "dealLead": "Alex Morgan",
+  "stage": "Seed",
+  "fund": "Fund II",
+  "budget": "£100,000 to £500,000",
+  "cadence": {
+   "mode": "inherit",
+   "paused": false,
+   "resumeOn": null,
+   "nextRun": "2027-01-01"
+  },
+  "coverage": [
+   {
+    "topic": "Financials",
+    "pct": 90
+   },
+   {
+    "topic": "Operations",
+    "pct": 80
+   },
+   {
+    "topic": "Market and competitors",
+    "pct": 55
+   },
+   {
+    "topic": "Legal and IP",
+    "pct": 20
+   },
+   {
+    "topic": "Team",
+    "pct": 0
+   }
+  ],
+  "openItems": [
+   {
+    "id": "a",
+    "head": "Upload the operator licence",
+    "why": "The Sentinel skipped legal and IP exposure for lack of it."
+   },
+   {
+    "id": "b",
+    "head": "Confirm the Leeds route density",
+    "why": "The 11-stop figure comes from one cost model."
+   },
+   {
+    "id": "c",
+    "head": "Log what happened after the April PIVOT",
+    "why": "Builds your outcome record."
+   }
+  ]
+ },
+ {
+  "id": "halden",
+  "title": "Halden Biosystems",
+  "description": "Point-of-care diagnostic tests for respiratory infections, sold to GP practices and urgent care centres.",
+  "industry": "Healthcare",
+  "country": "United Kingdom",
+  "city": "Cambridge",
+  "model": "Device sale plus per-test cartridges",
+  "target": "GP practices and urgent care centres",
+  "type": "startup",
+  "dealLead": "Priya Nair",
+  "stage": "Series A",
+  "fund": "Fund II",
+  "cadence": {
+   "mode": "inherit",
+   "paused": false,
+   "resumeOn": null,
+   "nextRun": "2027-01-01"
+  },
+  "coverage": [
+   {
+    "topic": "Financials",
+    "pct": 90
+   },
+   {
+    "topic": "Operations",
+    "pct": 70
+   },
+   {
+    "topic": "Market and competitors",
+    "pct": 60
+   },
+   {
+    "topic": "Legal and IP",
+    "pct": 40
+   },
+   {
+    "topic": "Team",
+    "pct": 30
+   }
+  ],
+  "openItems": []
+ },
+ {
+  "id": "quillpay",
+  "title": "Quillpay",
+  "description": "Invoice financing for freelancers, paid out within a day of an approved invoice.",
+  "industry": "Finance / Fintech",
+  "country": "United Kingdom",
+  "city": "London",
+  "model": "Fee per financed invoice",
+  "target": "UK freelancers and sole traders",
+  "type": "startup",
+  "dealLead": "Alex Morgan",
+  "stage": "Seed",
+  "fund": "Fund II",
+  "cadence": {
+   "mode": "inherit",
+   "paused": false,
+   "resumeOn": null,
+   "nextRun": "2026-12-01"
+  },
+  "coverage": [
+   {
+    "topic": "Financials",
+    "pct": 85
+   },
+   {
+    "topic": "Operations",
+    "pct": 60
+   },
+   {
+    "topic": "Market and competitors",
+    "pct": 70
+   },
+   {
+    "topic": "Legal and IP",
+    "pct": 55
+   },
+   {
+    "topic": "Team",
+    "pct": 40
+   }
+  ],
+  "openItems": []
+ },
+ {
+  "id": "marrow",
+  "title": "Marrow and Co",
+  "description": "Premium frozen ready meals sold direct to consumers and through independent delis.",
+  "industry": "Food and Beverage",
+  "country": "United Kingdom",
+  "city": "Bristol",
+  "model": "Direct-to-consumer subscription and wholesale",
+  "target": "Urban households and independent delis",
+  "type": "startup",
+  "dealLead": "Priya Nair",
+  "stage": "Seed",
+  "fund": "Fund II",
+  "cadence": {
+   "mode": "inherit",
+   "paused": false,
+   "resumeOn": null,
+   "nextRun": "2026-12-01"
+  },
+  "coverage": [
+   {
+    "topic": "Financials",
+    "pct": 80
+   },
+   {
+    "topic": "Operations",
+    "pct": 75
+   },
+   {
+    "topic": "Market and competitors",
+    "pct": 50
+   },
+   {
+    "topic": "Legal and IP",
+    "pct": 20
+   },
+   {
+    "topic": "Team",
+    "pct": 10
+   }
+  ],
+  "openItems": []
+ },
+ {
+  "id": "tessel",
+  "title": "Tessel Learning",
+  "description": "Adaptive maths practice for secondary schools, licensed per pupil.",
+  "industry": "Education",
+  "country": "United Kingdom",
+  "city": "Manchester",
+  "model": "Annual school licence per pupil",
+  "target": "Secondary schools and multi-academy trusts",
+  "type": "startup",
+  "dealLead": "Daniel Okoye",
+  "stage": "Pre-seed",
+  "fund": "Fund II",
+  "cadence": {
+   "mode": "inherit",
+   "paused": false,
+   "resumeOn": null,
+   "nextRun": "2026-12-01"
+  },
+  "coverage": [
+   {
+    "topic": "Financials",
+    "pct": 60
+   },
+   {
+    "topic": "Operations",
+    "pct": 50
+   },
+   {
+    "topic": "Market and competitors",
+    "pct": 40
+   },
+   {
+    "topic": "Legal and IP",
+    "pct": 30
+   },
+   {
+    "topic": "Team",
+    "pct": 0
+   }
+  ],
+  "openItems": []
+ },
+ {
+  "id": "brightwell",
+  "title": "Brightwell Homes",
+  "description": "Modular retrofit packages that bring older rental homes up to current energy standards.",
+  "industry": "Real Estate",
+  "country": "United Kingdom",
+  "city": "Birmingham",
+  "model": "Fixed-price retrofit packages",
+  "target": "Private landlords with five or more properties",
+  "type": "startup",
+  "dealLead": "Alex Morgan",
+  "stage": "Series A",
+  "fund": "Fund II",
+  "cadence": {
+   "mode": "inherit",
+   "paused": false,
+   "resumeOn": null,
+   "nextRun": "2026-12-01"
+  },
+  "coverage": [
+   {
+    "topic": "Financials",
+    "pct": 75
+   },
+   {
+    "topic": "Operations",
+    "pct": 65
+   },
+   {
+    "topic": "Market and competitors",
+    "pct": 55
+   },
+   {
+    "topic": "Legal and IP",
+    "pct": 45
+   },
+   {
+    "topic": "Team",
+    "pct": 30
+   }
+  ],
+  "openItems": []
+ },
+ {
+  "id": "ostra",
+  "title": "Ostra Media",
+  "description": "Short-form documentary studio producing branded series for streaming platforms.",
+  "industry": "Media / Entertainment",
+  "country": "United Kingdom",
+  "city": "Glasgow",
+  "model": "Commissioned series and licensing",
+  "target": "Streaming platforms and consumer brands",
+  "type": "startup",
+  "dealLead": "Daniel Okoye",
+  "stage": "Seed",
+  "fund": "Fund II",
+  "cadence": {
+   "mode": "inherit",
+   "paused": false,
+   "resumeOn": null,
+   "nextRun": "2026-12-01"
+  },
+  "coverage": [
+   {
+    "topic": "Financials",
+    "pct": 70
+   },
+   {
+    "topic": "Operations",
+    "pct": 60
+   },
+   {
+    "topic": "Market and competitors",
+    "pct": 65
+   },
+   {
+    "topic": "Legal and IP",
+    "pct": 40
+   },
+   {
+    "topic": "Team",
+    "pct": 35
+   }
+  ],
+  "openItems": []
+ },
+ {
+  "id": "kelvin",
+  "title": "Kelvin Freight",
+  "description": "Digital freight brokerage for container haulage from east coast ports.",
+  "industry": "Logistics / Supply Chain",
+  "country": "United Kingdom",
+  "city": "Felixstowe",
+  "model": "Commission on each booked load",
+  "target": "Importers and freight forwarders",
+  "type": "startup",
+  "dealLead": "Priya Nair",
+  "stage": "Series A",
+  "fund": "Fund II",
+  "cadence": {
+   "mode": "monthly",
+   "paused": true,
+   "resumeOn": "2026-12-01",
+   "nextRun": null
+  },
+  "coverage": [
+   {
+    "topic": "Financials",
+    "pct": 80
+   },
+   {
+    "topic": "Operations",
+    "pct": 70
+   },
+   {
+    "topic": "Market and competitors",
+    "pct": 60
+   },
+   {
+    "topic": "Legal and IP",
+    "pct": 50
+   },
+   {
+    "topic": "Team",
+    "pct": 20
+   }
+  ],
+  "openItems": []
+ },
+ {
+  "id": "atlas",
+  "title": "Atlas Home Retail: own-label expansion",
+  "description": "Strategy to launch an own-label homeware range across 40 stores and online.",
+  "industry": "E-Commerce / Retail",
+  "country": "United Kingdom",
+  "city": "Nottingham",
+  "model": "Higher-margin own-label lines replacing branded stock",
+  "target": "Existing store and online customers",
+  "type": "strategy",
+  "dealLead": "Alex Morgan",
+  "stage": "Corporate",
+  "fund": "Corporate programme",
+  "cadence": {
+   "mode": "inherit",
+   "paused": false,
+   "resumeOn": null,
+   "nextRun": "2027-01-01"
+  },
+  "coverage": [
+   {
+    "topic": "Financials",
+    "pct": 70
+   },
+   {
+    "topic": "Operations",
+    "pct": 60
+   },
+   {
+    "topic": "Market and competitors",
+    "pct": 50
+   },
+   {
+    "topic": "Legal and IP",
+    "pct": 30
+   },
+   {
+    "topic": "Team",
+    "pct": 20
+   }
+  ],
+  "openItems": []
+ },
+ {
+  "id": "verde",
+  "title": "Verde Energy switching campaign",
+  "description": "Winter campaign to move customers onto a fixed green tariff through price-comparison partners.",
+  "industry": "Other",
+  "country": "United Kingdom",
+  "city": "Cardiff",
+  "model": "Customer acquisition through partner channels",
+  "target": "Households coming off fixed tariffs",
+  "type": "campaign",
+  "dealLead": "Priya Nair",
+  "stage": "Corporate",
+  "fund": "Corporate programme",
+  "cadence": {
+   "mode": "inherit",
+   "paused": false,
+   "resumeOn": null,
+   "nextRun": "2026-12-01"
+  },
+  "coverage": [
+   {
+    "topic": "Financials",
+    "pct": 50
+   },
+   {
+    "topic": "Operations",
+    "pct": 40
+   },
+   {
+    "topic": "Market and competitors",
+    "pct": 30
+   },
+   {
+    "topic": "Legal and IP",
+    "pct": 20
+   },
+   {
+    "topic": "Team",
+    "pct": 10
+   }
+  ],
+  "openItems": []
+ }
+]

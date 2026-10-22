@@ -1,0 +1,74 @@
+[
+ {
+  "at": "2026-10-16T11:05:00Z",
+  "who": "Alex Morgan",
+  "action": "finding.status",
+  "object": "Finding",
+  "objectId": "northline-4-f30",
+  "detail": "Marked \"Licensing path is clear\" as Resolved"
+ },
+ {
+  "at": "2026-10-16T11:02:00Z",
+  "who": "Alex Morgan",
+  "action": "finding.dismiss",
+  "object": "Finding",
+  "objectId": "northline-4-f28",
+  "detail": "Dismissed \"City-centre congestion windows\": Deliveries run before 7am, outside the restricted windows."
+ },
+ {
+  "at": "2026-10-15T09:12:00Z",
+  "who": "Priya Nair",
+  "action": "finding.status",
+  "object": "Finding",
+  "objectId": "northline-4-f5",
+  "detail": "Accepted \"Every drop below 14 stops loses money\" and took ownership"
+ },
+ {
+  "at": "2026-10-14T14:06:00Z",
+  "who": "AVA",
+  "action": "audit.complete",
+  "object": "Audit",
+  "objectId": "northline-4",
+  "detail": "Completed audit 4 of 4 for Northline Cold Chain. Directive PIVOT."
+ },
+ {
+  "at": "2026-10-14T14:02:00Z",
+  "who": "AVA",
+  "action": "audit.start",
+  "object": "Audit",
+  "objectId": "northline-4",
+  "detail": "Started scheduled audit of Northline Cold Chain"
+ },
+ {
+  "at": "2026-10-12T09:41:00Z",
+  "who": "Alex Morgan",
+  "action": "member.invite",
+  "object": "User",
+  "objectId": "u5",
+  "detail": "Invited Sam Brooks as Analyst"
+ },
+ {
+  "at": "2026-10-02T16:20:00Z",
+  "who": "Priya Nair",
+  "action": "file.upload",
+  "object": "File",
+  "objectId": "nl-s1",
+  "detail": "Uploaded Deck v3 and Unit economics model to Northline Cold Chain"
+ },
+ {
+  "at": "2026-10-01T11:05:00Z",
+  "who": "Alex Morgan",
+  "action": "org.update",
+  "object": "Organisation",
+  "objectId": "org",
+  "detail": "Changed alert threshold from 8 to 5 points"
+ },
+ {
+  "at": "2026-09-28T15:12:00Z",
+  "who": "Priya Nair",
+  "action": "export.pdf",
+  "object": "Audit",
+  "objectId": "marrow-2",
+  "detail": "Exported PDF for Marrow and Co"
+ }
+]

@@ -1,30 +1,54 @@
 import landing from './screens/landing.js';
 import pricing from './screens/pricing.js';
 import team from './screens/team.js';
-import { planned } from './screens/planned.js';
+import freeAudit from './screens/free-audit.js';
+import signIn from './screens/sign-in.js';
+import onboarding from './screens/onboarding.js';
+import portfolio from './screens/portfolio.js';
+import company from './screens/company.js';
+import newAnalysis from './screens/new-analysis.js';
+import running from './screens/running.js';
+import report from './screens/report.js';
+import history from './screens/history.js';
+import sources from './screens/sources.js';
+import benchmarks from './screens/benchmarks.js';
+import outcomes from './screens/outcomes.js';
+import alerts from './screens/alerts.js';
+import dataRoom from './screens/data-room.js';
+import exportScreen from './screens/export.js';
+import account from './screens/account.js';
+import { shared, invite, noAccess, maintenance, privacy, terms, trust } from './screens/misc.js';
 
-// layout: 'public' renders the site header and footer around the screen.
+// layout: 'public' = site header and footer; 'app' = signed-in app header;
+// 'bare' = no chrome.
 export const routes = [
   // Public
   { path: '/', screen: { ...landing, className: 'landing' }, layout: 'public', large: true },
   { path: '/pricing', screen: { ...pricing, className: 'pricing' }, layout: 'public' },
   { path: '/team', screen: { ...team, className: 'team' }, layout: 'public' },
-  { path: '/free-audit', screen: planned({ name: 'Free audit', phase: 5 }), layout: 'public' },
-  { path: '/sign-in', screen: planned({ name: 'Sign in', phase: 5 }), layout: 'public' },
+  { path: '/free-audit', screen: freeAudit, layout: 'public' },
+  { path: '/sign-in', screen: signIn, layout: 'bare' },
+  { path: '/privacy', screen: privacy, layout: 'public' },
+  { path: '/terms', screen: terms, layout: 'public' },
+  { path: '/trust', screen: trust, layout: 'public' },
+  { path: '/maintenance', screen: maintenance, layout: 'public' },
+  { path: '/shared/:token', screen: shared, layout: 'bare' },
+  { path: '/invite/:token', screen: invite, layout: 'public' },
 
   // App
-  { path: '/onboarding', screen: planned({ name: 'Onboarding', phase: 5 }), layout: 'public' },
-  { path: '/portfolio', screen: planned({ name: 'Portfolio', phase: 3 }), layout: 'public' },
-  { path: '/company/:id', screen: planned({ name: 'Company', phase: 3 }), layout: 'public' },
-  { path: '/new-analysis', screen: planned({ name: 'New analysis', phase: 2 }), layout: 'public' },
-  { path: '/running/:auditId', screen: planned({ name: 'Running audit', phase: 2 }), layout: 'public' },
-  { path: '/report/:auditId', screen: planned({ name: 'Report', phase: 2 }), layout: 'public' },
-  { path: '/history/:companyId', screen: planned({ name: 'Audit history', phase: 3 }), layout: 'public' },
-  { path: '/sources', screen: planned({ name: 'Sources', phase: 4 }), layout: 'public' },
-  { path: '/benchmarks', screen: planned({ name: 'Benchmarks', phase: 4 }), layout: 'public' },
-  { path: '/outcomes', screen: planned({ name: 'Outcomes', phase: 4 }), layout: 'public' },
-  { path: '/alerts', screen: planned({ name: 'Alerts', phase: 4 }), layout: 'public' },
-  { path: '/data-room', screen: planned({ name: 'Data room', phase: 4 }), layout: 'public' },
-  { path: '/export', screen: planned({ name: 'Export', phase: 5 }), layout: 'public' },
-  { path: '/account', screen: planned({ name: 'Account', phase: 5 }), layout: 'public' },
+  { path: '/onboarding', screen: onboarding, layout: 'bare' },
+  { path: '/portfolio', screen: portfolio, layout: 'app' },
+  { path: '/company/:id', screen: company, layout: 'app' },
+  { path: '/new-analysis', screen: newAnalysis, layout: 'app' },
+  { path: '/running/:auditId', screen: running, layout: 'app' },
+  { path: '/report/:auditId', screen: report, layout: 'app' },
+  { path: '/history/:companyId', screen: history, layout: 'app' },
+  { path: '/sources', screen: sources, layout: 'app' },
+  { path: '/benchmarks', screen: benchmarks, layout: 'app' },
+  { path: '/outcomes', screen: outcomes, layout: 'app' },
+  { path: '/alerts', screen: alerts, layout: 'app' },
+  { path: '/data-room', screen: dataRoom, layout: 'app' },
+  { path: '/export', screen: exportScreen, layout: 'app' },
+  { path: '/account', screen: account, layout: 'app' },
+  { path: '/no-access', screen: noAccess, layout: 'app' },
 ];

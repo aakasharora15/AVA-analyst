@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "mock": "node scripts/generate-mock.mjs"
   },
   "devDependencies": {
     "jsdom": "^29.1.1",

@@ -1,0 +1,34 @@
+{
+ "name": "Your Fund Name",
+ "kind": "VC fund",
+ "plan": "Portfolio",
+ "renewal": "[RENEWAL DATE]",
+ "limit": "[LIMIT]",
+ "seats": "[SEATS]",
+ "cadence": {
+  "mode": "quarterly",
+  "day": 1
+ },
+ "alertThreshold": 5,
+ "currency": "GBP",
+ "retention": "[CONFIRM WITH LEGAL]",
+ "region": "United Kingdom",
+ "branding": {
+  "coverName": "Your Fund Name",
+  "footer": "Confidential. Prepared for the investment committee.",
+  "attribution": true
+ },
+ "alertRules": {
+  "directive": true,
+  "score": true,
+  "high": true,
+  "evidence": false
+ },
+ "delivery": {
+  "inApp": true,
+  "email": "weekly",
+  "immediate": true
+ },
+ "ownerId": "u1",
+ "holdMode": false
+}
