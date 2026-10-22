@@ -1,0 +1,46 @@
+/* Pricing */
+.pricing { padding-top: 1rem; padding-bottom: 6rem; display: flex; flex-direction: column; gap: 1.75rem; }
+
+.p-hero { padding: 4rem; display: flex; flex-direction: column; gap: 1.25rem; align-items: flex-start; border-radius: 36px; }
+.p-hero-lbl { color: var(--text-on-hero-muted); }
+.p-hero-title {
+  font-size: clamp(2.5rem, 1.5rem + 3.6vw, 4.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+  text-transform: uppercase;
+  max-width: 47.5rem;
+  padding-top: .08em;
+}
+.p-hero-sub { font-size: 1.1875rem; max-width: 35rem; color: var(--text-on-hero); }
+
+.p-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(21.25rem, 100%), 1fr)); gap: 1.25rem; align-items: stretch; }
+.p-plan { padding: 2.5rem; display: flex; flex-direction: column; gap: 1.25rem; border-radius: 28px; }
+.p-plan-featured { box-shadow: var(--hero-edge); }
+.p-plan-tag { align-self: flex-start; }
+.p-tag-free { background: var(--ground); color: var(--text-muted); }
+.p-plan-name { font-size: 2rem; letter-spacing: -0.035em; font-weight: 700; line-height: 1.15; }
+.p-plan-price { display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap; }
+.p-plan-price .num { font-size: 3.5rem; font-weight: 700; padding-top: .08em; }
+.p-plan-unit { color: var(--text-on-hero-muted); }
+.p-plan-body { color: var(--text-muted); font-size: .9375rem; }
+.p-plan-featured .p-plan-body { color: var(--text-on-hero); }
+.p-features { list-style: none; display: flex; flex-direction: column; }
+.p-features li { display: flex; gap: .75rem; padding: .625rem 0; font-size: .9375rem; border-top: 1px solid var(--line); }
+.p-features li::before { content: ''; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--accent-strong); margin-top: .5625rem; }
+.p-plan-featured .p-features li { border-color: rgba(255, 255, 255, .14); }
+.p-plan-featured .p-features li::before { background: #E4DCFF; }
+.p-plan-cta { margin-top: auto; }
+
+.p-note { padding: 2rem 2.25rem; display: flex; flex-wrap: wrap; gap: 1rem 2.5rem; justify-content: space-between; align-items: center; }
+.p-note-copy { display: flex; flex-direction: column; gap: .125rem; max-width: 40rem; }
+.p-note-copy b { font-weight: 700; font-size: 1.25rem; letter-spacing: -0.02em; }
+.p-note-copy .muted { font-size: .9375rem; }
+
+@media (max-width: 600px) {
+  .p-hero { padding: 2.5rem 1.5rem; border-radius: 24px; }
+  .p-hero-sub { font-size: 1.0625rem; }
+  .p-plan { padding: 1.75rem 1.5rem; border-radius: 24px; }
+  .p-note { padding: 1.5rem; }
+  .p-note .btn { width: 100%; }
+}

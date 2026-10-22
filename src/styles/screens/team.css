@@ -1,0 +1,20 @@
+/* Team */
+.team { padding-top: 4.5rem; padding-bottom: 6rem; display: flex; flex-direction: column; gap: 3.5rem; }
+.team > * { margin-left: .75rem; margin-right: .75rem; }
+
+.t-intro { max-width: 40rem; display: flex; flex-direction: column; align-items: flex-start; gap: 1.5rem; }
+.t-intro-sub { font-size: 1.1875rem; color: var(--text-soft); max-width: 28.75rem; }
+
+.t-grid { list-style: none; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(13.75rem, 100%), 1fr)); gap: 1rem; }
+.t-member { padding: 2rem; display: flex; flex-direction: column; gap: 1.25rem; min-height: 17.5rem; }
+.t-avatar { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-mark); font-size: 1.875rem; color: #fff; }
+.t-name { font-size: 1.75rem; letter-spacing: -0.03em; font-weight: 600; line-height: 1.2; }
+.t-role { margin-top: .375rem; }
+.t-bio { margin-top: auto; font-size: .875rem; color: var(--text-muted); }
+
+@media (max-width: 600px) {
+  .team { padding-top: 2.5rem; gap: 2.5rem; }
+  .team > * { margin-left: 0; margin-right: 0; }
+  .t-intro-sub { font-size: 1.0625rem; }
+  .t-member { min-height: 0; padding: 1.5rem; }
+}

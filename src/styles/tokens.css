@@ -1,0 +1,97 @@
+/* AVA design tokens. Dark only: there is no light theme. */
+:root {
+  color-scheme: dark;
+
+  /* Ground and surfaces */
+  --ground: #05071A;
+  --surface: #0D1226;               /* solid cards, lists, forms */
+  --surface-2: #121833;             /* nested rows inside a card */
+  --surface-3: #171E3D;             /* inputs, hover rows */
+  --line: rgba(255, 255, 255, .09);
+  --line-strong: rgba(255, 255, 255, .16);
+  --glass-fill: rgba(13, 18, 38, .5);
+  --glass-fill-fallback: rgba(13, 18, 38, .78);
+  --glass-solid: rgb(13, 18, 38);
+  --glass-edge: inset 0 1px 0 rgba(255, 255, 255, .18);
+
+  /* Hero and focal panels */
+  --hero:
+    radial-gradient(70% 90% at 6% 100%, rgba(196, 166, 255, .5) 0%, rgba(92, 104, 255, .3) 40%, rgba(10, 14, 50, 0) 75%),
+    linear-gradient(135deg, #2B31B5 0%, #10153E 55%, #080A1C 100%);
+  --hero-strong:
+    radial-gradient(62% 85% at 6% 96%, rgba(196, 166, 255, .6) 0%, rgba(92, 104, 255, .45) 34%, rgba(10, 14, 50, 0) 70%),
+    radial-gradient(48% 60% at 100% 0%, #05070F 0%, rgba(5, 7, 15, 0) 78%),
+    linear-gradient(135deg, #2B31B5 0%, #10153E 52%, #05070F 100%);
+  --hero-edge: inset 0 1px 0 rgba(255, 255, 255, .14), 0 24px 70px rgba(50, 60, 220, .3);
+
+  /* Text */
+  --text: #F2F4FA;
+  --text-muted: #A6AEC2;             /* 4.5:1 over the brightest drifting blob */
+  --text-label: #9CA5BA;
+  --text-on-hero: #E2E7F5;           /* 4.5:1 over the lavender glow */
+  --text-on-hero-muted: #D5DCF0;
+  --text-soft: #B9C4E2;
+  --accent: #A99FFF;                /* links, focus */
+  --accent-strong: #8B7DFF;
+  --accent-ink: #C9C2FF;
+
+  /* Primary action */
+  --primary: linear-gradient(180deg, #F4F0FF, #E4DCFF);
+  --primary-ink: #05071A;
+  --primary-glow: 0 8px 28px rgba(150, 130, 255, .35);
+
+  /* Verdicts: used only on verdicts */
+  --proceed: #4ADE9A;
+  --hold: #F2C46A;
+  --pivot: #FFA566;
+  --kill: #FF8F8F;
+  --proceed-bg: rgba(74, 222, 154, .16);
+  --hold-bg: rgba(242, 196, 106, .16);
+  --pivot-bg: rgba(255, 165, 102, .16);
+  --kill-bg: rgba(255, 143, 143, .16);
+
+  /* Severities */
+  --sev-high: #FF8F8F;
+  --sev-high-bg: rgba(255, 123, 123, .16);
+  --sev-medium: #F2C46A;
+  --sev-medium-bg: rgba(242, 196, 106, .16);
+  --sev-low: #8FB8FF;
+  --sev-low-bg: rgba(143, 184, 255, .16);
+
+  /* Type */
+  --font-display: 'Josefin Sans', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --font-mark: 'DM Serif Display', Georgia, serif;
+
+  /* Shape */
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 24px;
+  --r-xl: 32px;
+  --r-pill: 999px;
+
+  /* Layout */
+  --page-max: 87.5rem;   /* 1400px */
+  --app-max: 82.5rem;    /* 1320px */
+  --gutter: 1.5rem;
+  --tap: 44px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+@media (max-width: 600px) {
+  :root { --gutter: 1rem; }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --line: rgba(255, 255, 255, .28);
+    --line-strong: rgba(255, 255, 255, .4);
+    --text-muted: #C2C9D8;
+    --text-label: #AEB6C8;
+  }
+}
