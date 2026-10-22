@@ -4,6 +4,8 @@
 import { CALIBRATION, CATEGORIES, DIRECTIVES } from './config.js';
 
 const round = (n) => Math.round(n);
+// Snap to 6 decimals so float noise can never decide a .5 rounding tie.
+const snap = (n) => Math.round(n * 1e6) / 1e6;
 
 /** Exposure per category, 0 to 100, higher is worse. */
 export function categoryExposure(findings, cal = CALIBRATION) {
@@ -19,7 +21,7 @@ export function categoryExposure(findings, cal = CALIBRATION) {
 /** Resilience Score = 100 minus the weighted average exposure, then the cap rule. */
 export function resilienceScore(exposure, type = 'startup', cal = CALIBRATION) {
   const weights = cal.categoryWeights[type] || cal.categoryWeights.startup;
-  const weighted = CATEGORIES.reduce((sum, c) => sum + weights[c] * exposure[c], 0);
+  const weighted = snap(CATEGORIES.reduce((sum, c) => sum + weights[c] * exposure[c], 0));
   const raw = round(100 - weighted);
   const worst = CATEGORIES
     .filter((c) => exposure[c] > cal.cap.threshold)

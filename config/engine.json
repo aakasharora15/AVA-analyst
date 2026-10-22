@@ -1,0 +1,59 @@
+{
+  "_comment": "Single source of truth for the scoring engine (spec 4.0). Read by src/engine (JavaScript) and api/_ava (Python). Every number is a starting value to calibrate on real ventures with known outcomes before launch [CALIBRATE]. Bands are the spec's approved starting values.",
+  "agents": [
+    { "n": 1, "id": "saboteur", "name": "The Saboteur", "mandate": "Internal failure: operations, waste, team, unit economics." },
+    { "n": 2, "id": "predator", "name": "The Predator", "mandate": "Competitive attack: how a funded incumbent would break the moat." },
+    { "n": 3, "id": "copycat", "name": "The Copycat", "mandate": "Market saturation: how fast and cheaply the idea can be cloned." },
+    { "n": 4, "id": "spectator", "name": "The Spectator", "mandate": "Customer demand and financial runway." },
+    { "n": 5, "id": "sentinel", "name": "The Sentinel", "mandate": "Regulation, compliance, legal and IP exposure." },
+    { "n": 6, "id": "orchestrator", "name": "The Orchestrator", "mandate": "Weighs all five reports, writes the rationale and may move the directive one band down." }
+  ],
+  "sections": [
+    { "id": "exec", "agent": 1, "title": "Executive risk summary" },
+    { "id": "ops", "agent": 1, "title": "Operational risks" },
+    { "id": "fin", "agent": 1, "title": "Financial risks" },
+    { "id": "fail", "agent": 1, "title": "Failure probability indicators" },
+    { "id": "comp", "agent": 2, "title": "Competitor attack analysis" },
+    { "id": "geo", "agent": 2, "title": "Regional and geographic challenges" },
+    { "id": "sat", "agent": 3, "title": "Market saturation" },
+    { "id": "dem", "agent": 4, "title": "Customer demand and runway" },
+    { "id": "psy", "agent": 4, "title": "Customer psychology risks" },
+    { "id": "reg", "agent": 5, "title": "Regulation and compliance" },
+    { "id": "ip", "agent": 5, "title": "Legal and IP exposure" },
+    { "id": "inv", "agent": 6, "title": "Investor perspective and recommendations" },
+    { "id": "dir", "agent": 6, "title": "Final directive and roadmap" }
+  ],
+  "categories": ["Market", "Financial", "Operational", "Competition", "Customer psychology", "Geographic", "Regulatory"],
+  "severities": ["HIGH", "MEDIUM", "LOW"],
+  "directives": ["KILL", "PIVOT", "HOLD", "PROCEED"],
+  "ventureTypes": ["startup", "strategy", "campaign"],
+  "auditStatuses": ["queued", "running", "complete", "partial", "failed"],
+  "currentCalibration": "cal-2026.2",
+  "calibrations": {
+    "cal-2026.2": {
+      "version": "cal-2026.2",
+      "severityWeights": { "HIGH": 22, "MEDIUM": 12, "LOW": 5 },
+      "categoryWeights": {
+        "startup": { "Market": 0.15, "Financial": 0.2, "Operational": 0.15, "Competition": 0.15, "Customer psychology": 0.1, "Geographic": 0.1, "Regulatory": 0.15 },
+        "strategy": { "Market": 0.2, "Financial": 0.2, "Operational": 0.2, "Competition": 0.15, "Customer psychology": 0.1, "Geographic": 0.05, "Regulatory": 0.1 },
+        "campaign": { "Market": 0.2, "Financial": 0.1, "Operational": 0.1, "Competition": 0.15, "Customer psychology": 0.3, "Geographic": 0.05, "Regulatory": 0.1 }
+      },
+      "cap": { "threshold": 85, "maxScore": 39 },
+      "bands": { "KILL": 0, "PIVOT": 35, "HOLD": 45, "PROCEED": 65 }
+    },
+    "cal-2026.1": {
+      "version": "cal-2026.1",
+      "severityWeights": { "HIGH": 24, "MEDIUM": 12, "LOW": 4 },
+      "categoryWeights": {
+        "startup": { "Market": 0.15, "Financial": 0.2, "Operational": 0.15, "Competition": 0.15, "Customer psychology": 0.1, "Geographic": 0.1, "Regulatory": 0.15 },
+        "strategy": { "Market": 0.2, "Financial": 0.2, "Operational": 0.2, "Competition": 0.15, "Customer psychology": 0.1, "Geographic": 0.05, "Regulatory": 0.1 },
+        "campaign": { "Market": 0.2, "Financial": 0.1, "Operational": 0.1, "Competition": 0.15, "Customer psychology": 0.3, "Geographic": 0.05, "Regulatory": 0.1 }
+      },
+      "cap": { "threshold": 85, "maxScore": 39 },
+      "bands": { "KILL": 0, "PIVOT": 35, "HOLD": 45, "PROCEED": 65 }
+    }
+  },
+  "alertRules": { "bandCrossMargin": 2, "scoreMove": 5 },
+  "outcomeWindow": { "version": "ow-1", "firstMonths": 12, "finalMonths": 24 },
+  "drift": { "warningMedianChange": 3, "holdMedianChange": 6, "shadowSampleSize": 20, "maxRunVariance": 3 }
+}

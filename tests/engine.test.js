@@ -37,6 +37,12 @@ describe('resilience score', () => {
     expect(campaign).toBeLessThan(startup);
   });
 
+  it('rounds a .5 tie up regardless of float noise', () => {
+    // Weighted exposure 54.5 sums to 54.500000000000001 in floats; the score must still be 46.
+    const exp = { Market: 60, Financial: 66, Operational: 49, Competition: 64, 'Customer psychology': 51, Geographic: 44, Regulatory: 39 };
+    expect(resilienceScore(exp).score).toBe(46);
+  });
+
   it('applies the category cap when one category is catastrophic', () => {
     const exp = { ...flatExposure(5), Regulatory: CALIBRATION.cap.threshold + 5 };
     const r = resilienceScore(exp);
