@@ -1,4 +1,5 @@
 import { html } from '../lib/html.js';
+import { PASSWORD_RULE, passwordProblem } from '../data/shared.js';
 import { MODE, signIn, signUp, getSession, requestPasswordReset, updatePassword, signInWithSso, resendVerification } from '../data/repo.js';
 import { wordmarkSvg } from '../components/logo.js';
 
@@ -8,10 +9,10 @@ import { wordmarkSvg } from '../components/logo.js';
 const demo = MODE === 'mock';
 
 const STATES = {
-  verify: { title: 'Check your email.', body: 'We sent a verification link to your work email. It expires in 24 hours.', action: 'Resend link' },
+  verify: { title: 'Check your email.', body: 'We sent a verification link to your work email. It expires in 1 hour.', action: 'Resend link' },
   forgot: { title: 'Reset your password.', body: 'Enter your work email and we will send a reset link.' },
   'reset-sent': { title: 'Reset link sent.', body: 'If an account exists for that email, a reset link is on its way. It expires in 1 hour.', action: 'Resend link' },
-  reset: { title: 'Choose a new password.', body: 'At least 12 characters.' },
+  reset: { title: 'Choose a new password.', body: PASSWORD_RULE },
   'reset-expired': { title: 'This reset link has expired.', body: 'Reset links last 1 hour. Request a new one to continue.', action: 'Send a new link' },
   'sso-not-configured': { title: 'Single sign-on is not set up for this domain.', body: 'Sign in with your email and password, or ask your organisation Owner to configure single sign-on (Enterprise plan).' },
   'sso-error': { title: 'Single sign-on failed.', body: 'Your identity provider returned an error. Contact support with this reference: AVA-SSO-[REFERENCE].' },
@@ -41,7 +42,7 @@ function panel(ctx) {
     <form class="stack-md" data-signin novalidate>
       ${isIn ? '' : html`<div class="fld"><label for="s-name">Full name</label><input id="s-name" class="inp" autocomplete="name"></div><div class="fld"><label for="s-org">Organisation</label><input id="s-org" class="inp" autocomplete="organization" placeholder="Fund, team or accelerator"></div>`}
       <div class="fld"><label for="s-email">Work email</label><input id="s-email" type="email" class="inp" autocomplete="email" value="${demo ? 'alex@yourfund.example' : ''}" aria-describedby="s-err"></div>
-      <div class="fld"><label for="s-pass">Password</label><input id="s-pass" type="password" class="inp" autocomplete="${isIn ? 'current-password' : 'new-password'}" value="${isIn && demo ? 'prototype-only' : ''}"${isIn ? '' : html` minlength="12" aria-describedby="s-pass-hint"`}>${isIn ? '' : html`<span class="hint" id="s-pass-hint">At least 12 characters.</span>`}</div>
+      <div class="fld"><label for="s-pass">Password</label><input id="s-pass" type="password" class="inp" autocomplete="${isIn ? 'current-password' : 'new-password'}" value="${isIn && demo ? 'prototype-only' : ''}"${isIn ? '' : html` minlength="12" aria-describedby="s-pass-hint"`}>${isIn ? '' : html`<span class="hint" id="s-pass-hint">${PASSWORD_RULE}</span>`}</div>
       <span class="err" id="s-err" role="alert" data-err></span>
       <button type="submit" class="btn btn-primary btn-lg" data-submit>${isIn ? 'Sign in' : 'Create account'}</button>
       ${isIn ? html`<a class="link small" href="/sign-in?state=forgot">Forgot password?</a>` : html`<p class="hint">[TERMS] and [PRIVACY] apply. We will send a link to verify your email.</p>`}
@@ -113,7 +114,7 @@ export default {
       if (f.matches('[data-reset]')) {
         const p = f.querySelector('#rs-pass');
         const err = root.querySelector('[data-rs-err]');
-        if (p.value.length < 12) { err.textContent = 'Use at least 12 characters.'; p.focus(); return; }
+        if (passwordProblem(p.value)) { err.textContent = passwordProblem(p.value); p.focus(); return; }
         busy(f, true);
         try {
           const r = await updatePassword(p.value);

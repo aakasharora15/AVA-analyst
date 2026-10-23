@@ -10,7 +10,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { AGENTS, ALERT_RULES, CATEGORIES, SECTIONS } from '../engine/config.js';
 import { outcomeStatus } from '../engine/outcomes.js';
-import { roleCan, checkEmailFormat, todayIso, addDays, computeNextRun, kindOf, pickAudit, enrichAudit, lockFindings } from './shared.js';
+import { roleCan, checkEmailFormat, passwordProblem, PASSWORD_RULE, todayIso, addDays, computeNextRun, kindOf, pickAudit, enrichAudit, lockFindings } from './shared.js';
 import { load, save } from '../lib/storage.js';
 
 export const MODE = 'live';
@@ -133,7 +133,7 @@ export async function getSession() {
 const AUTH_MESSAGES = [
   [/invalid login credentials/i, 'That email and password do not match.'],
   [/email not confirmed/i, 'Verify your email first. Check your inbox for the link.'],
-  [/password should be at least/i, 'Use at least 12 characters.'],
+  [/password should (be at least|contain)/i, PASSWORD_RULE],
   [/rate limit/i, 'Too many attempts. Wait a minute and try again.'],
 ];
 const authError = (error) => {
@@ -149,7 +149,7 @@ export async function signIn(email, password) {
 }
 
 export async function signUp({ name, org, email, password }) {
-  if (String(password || '').length < 12) throw new Error('Use at least 12 characters.');
+  if (passwordProblem(password)) throw new Error(passwordProblem(password));
   const { error } = await sb.auth.signUp({ email, password, options: { data: { name, org }, emailRedirectTo: `${window.location.origin}/onboarding` } });
   if (error) authError(error);
   return { verify: true };
@@ -167,7 +167,7 @@ export async function resendVerification(email) {
 }
 
 export async function updatePassword(password) {
-  if (String(password || '').length < 12) throw new Error('Use at least 12 characters.');
+  if (passwordProblem(password)) throw new Error(passwordProblem(password));
   const { error } = await sb.auth.updateUser({ password });
   if (error) {
     if (/session|expired|jwt/i.test(error.message)) return { state: 'reset-expired' };

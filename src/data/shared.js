@@ -30,6 +30,15 @@ export function checkEmailFormat(email) {
   return { ok: true, domain: m[1] };
 }
 
+// Matches the Supabase Auth password policy (Authentication -> Email):
+// minimum 12, lower and upper case letters, digits and symbols.
+export const PASSWORD_RULE = 'At least 12 characters, with upper and lower case letters, a number and a symbol.';
+export function passwordProblem(pw) {
+  const p = String(pw || '');
+  const ok = p.length >= 12 && /[a-z]/.test(p) && /[A-Z]/.test(p) && /\d/.test(p) && /[^A-Za-z0-9]/.test(p);
+  return ok ? null : PASSWORD_RULE;
+}
+
 export const todayIso = () => new Date().toISOString().slice(0, 10);
 
 export function addDays(iso, days) {
