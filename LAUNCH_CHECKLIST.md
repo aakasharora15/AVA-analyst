@@ -16,7 +16,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [~] 1.7 Auth settings: email confirmation on, password minimum 12, site URL, redirect URLs
 - [ ] 1.8 Auth emails: custom SMTP (Resend) so sign-up emails are not rate-limited
 - [ ] 1.9 Enable pg_cron and pg_net (needed in Stage 3)
-- [~] 1.10 Google sign-in: Google Cloud OAuth client, then Supabase Google provider (button built)
+- [~] 1.10 Google sign-in: Google Cloud project "ava-verdict" (dedicated AVA Verdict account), OAuth client "AVA Verdict staging" (External, Testing), Supabase Google provider saved. Remaining: rotate the secret exposed in a screenshot, test once the site URL is set
 - [ ] 1.11 Microsoft sign-in (recommended over Apple for funds and corporates; awaiting decision)
 
 ## Stage 2. Vercel (hosting and the API)
@@ -53,6 +53,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [ ] 5.3 Fill placeholders: [PRICE], [LIMIT], [SEATS], [RENEWAL DATE], [SALES EMAIL], team bios
 - [ ] 5.4 Legal: [PRIVACY], [TERMS], retention period
 - [ ] 5.5 Decide single sign-on for Enterprise at launch
+- [ ] 5.6 Google Auth Platform: complete Branding (home page, privacy, terms, authorised domain), then Publish app so anyone can use Continue with Google
 
 ## Stage 6. Build before or soon after first client
 
