@@ -286,6 +286,7 @@ button.dr-row[aria-pressed='true'] { border-color: rgba(170, 160, 255, .7); }
 .si-or span:not(.lbl) { height: 1px; background: var(--line-strong); }
 .si-panel .btn-lg { width: 100%; }
 .si-panel > .btn { width: 100%; }
+.si-panel > .btn .si-g { margin-right: .5rem; flex: none; }
 .si-back { align-self: center; }
 @media (max-width: 900px) {
   .si { grid-template-columns: 1fr; }

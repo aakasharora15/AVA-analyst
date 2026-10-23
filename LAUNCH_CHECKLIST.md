@@ -16,6 +16,8 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [~] 1.7 Auth settings: email confirmation on, password minimum 12, site URL, redirect URLs
 - [ ] 1.8 Auth emails: custom SMTP (Resend) so sign-up emails are not rate-limited
 - [ ] 1.9 Enable pg_cron and pg_net (needed in Stage 3)
+- [~] 1.10 Google sign-in: Google Cloud OAuth client, then Supabase Google provider (button built)
+- [ ] 1.11 Microsoft sign-in (recommended over Apple for funds and corporates; awaiting decision)
 
 ## Stage 2. Vercel (hosting and the API)
 

@@ -89,6 +89,8 @@ export async function signIn(email, _password) {
 export async function signOut() { db.session.signedIn = false; persist(); }
 // Prototype stand-ins for the live auth flows (spec 4.12).
 export async function signUp() { return { verify: true }; }
+// Demo: Google sign-in opens the sample account.
+export async function signInWithProvider() { await signIn('alex@yourfund.example'); return { signedIn: true }; }
 export async function requestPasswordReset() {}
 export async function resendVerification() {}
 export async function updatePassword() {}

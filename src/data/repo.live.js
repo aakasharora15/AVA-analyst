@@ -155,6 +155,14 @@ export async function signUp({ name, org, email, password }) {
   return { verify: true };
 }
 
+// Google sign-in (Supabase OAuth). Supabase redirects back with the session;
+// the app's auth guard then sends people without an organisation to onboarding.
+export async function signInWithProvider(provider, next = '/portfolio') {
+  const { error } = await sb.auth.signInWithOAuth({ provider, options: { redirectTo: `${window.location.origin}${next}` } });
+  if (error) throw new Error(error.message);
+  return { signedIn: false };
+}
+
 export async function requestPasswordReset(email) {
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/sign-in?state=reset` });
   if (error) authError(error);
