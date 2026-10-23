@@ -13,15 +13,15 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] 1.4 Apply migration 2: data room file storage (2026-10-23)
 - [x] 1.5 Apply migration 3: reference data (2026-10-23)
 - [x] 1.6 Verify: run supabase/checks/verify_setup.sql, every row PASS (2026-10-23, 8/8 PASS)
-- [~] 1.7 Auth settings: email confirmation on, password minimum 12, site URL, redirect URLs
-- [ ] 1.8 Auth emails: custom SMTP (Resend) so sign-up emails are not rate-limited
-- [ ] 1.9 Enable pg_cron and pg_net (needed in Stage 3)
+- [x] 1.7 Auth settings: email confirmation on, password 12+ with upper/lower/digit/symbol, secure password change on, Site URL https://ava-analyst.vercel.app, redirects ava-analyst.vercel.app/** and localhost:5173/** (2026-10-23)
+- [ ] 1.8 Auth emails: custom SMTP (Resend). Blocked on owning a domain: Supabase's built-in email only reaches project team members, so public sign-up needs this
+- [x] 1.9 Enable pg_cron and pg_net (2026-10-23)
 - [~] 1.10 Google sign-in: Google Cloud project "ava-verdict" (dedicated AVA Verdict account), OAuth client "AVA Verdict staging" (External, Testing), Supabase Google provider saved. Remaining: rotate the secret exposed in a screenshot, test once the site URL is set
 - [ ] 1.11 Microsoft sign-in (recommended over Apple for funds and corporates; awaiting decision)
 
 ## Stage 2. Vercel (hosting and the API)
 
-- [ ] 2.1 Add environment variables from .env.example
+- [~] 2.1 Add environment variables from .env.example
 - [ ] 2.2 Production branch: merge this branch or point production at it
 - [ ] 2.3 Deploy; confirm /api/health returns ok
 - [ ] 2.4 Custom domain and HTTPS
