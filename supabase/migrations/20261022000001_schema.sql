@@ -9,7 +9,6 @@
 --   bypasses RLS. Triggers stop users from writing system-owned columns.
 -- * Every state change writes to audit_log through triggers.
 
-create extension if not exists pgcrypto;
 create schema if not exists app;
 
 -- ---------------------------------------------------------------------------
@@ -66,7 +65,7 @@ create table public.invites (
   org_id text not null references public.organisations (id) on delete cascade,
   email text not null,
   role text not null check (role in ('Admin', 'Analyst', 'Viewer')),
-  token text not null unique default encode(gen_random_bytes(24), 'hex'),
+  token text not null unique default replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''),
   expires_at timestamptz not null default now() + interval '7 days',
   accepted_at timestamptz,
   created_by uuid references auth.users (id),
@@ -280,7 +279,7 @@ create table public.outcomes (
 );
 
 create table public.share_links (
-  token text primary key default encode(gen_random_bytes(24), 'hex'),
+  token text primary key default replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''),
   org_id text not null references public.organisations (id) on delete cascade,
   audit_id text not null references public.audits (id) on delete cascade,
   recipient_email text not null,
