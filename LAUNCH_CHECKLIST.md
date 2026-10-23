@@ -7,7 +7,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Stage 1. Supabase (database, sign-in, file storage)
 
-- [~] 1.1 Create the Supabase project: new organisation "AVA" (Free), project ava-staging, region London
+- [~] 1.1 Create the Supabase project: new organisation "AVA Verdict" (type Startup, Free), project ava-verdict-staging, region London
 - [ ] 1.2 Save the project's keys and connection strings (password manager, never in chat or git)
 - [ ] 1.3 Apply migration 1: schema, security rules, audit log
 - [ ] 1.4 Apply migration 2: data room file storage
