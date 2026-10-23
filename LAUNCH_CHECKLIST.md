@@ -7,8 +7,8 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Stage 1. Supabase (database, sign-in, file storage)
 
-- [~] 1.1 Create the Supabase project: new organisation "AVA Verdict" (type Startup, Free), project ava-verdict-staging, region London
-- [ ] 1.2 Save the project's keys and connection strings (password manager, never in chat or git)
+- [x] 1.1 Create the Supabase project: organisation "AVA Verdict" (Startup, Free), project ava-verdict-staging, West Europe (London). URL: https://tzjbbsoyhiddgnwtkall.supabase.co (2026-10-23)
+- [~] 1.2 Save the project's keys and connection strings (password manager, never in chat or git)
 - [ ] 1.3 Apply migration 1: schema, security rules, audit log
 - [ ] 1.4 Apply migration 2: data room file storage
 - [ ] 1.5 Apply migration 3: reference data
@@ -67,4 +67,5 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Log
 
+- 2026-10-23: Staging project created. Not linked to GitHub; migrations applied by hand. Data API on, auto-expose off, automatic RLS on.
 - 2026-10-23: Removed the pgcrypto dependency from migration 1 so it applies cleanly on Supabase. Checklist created.
