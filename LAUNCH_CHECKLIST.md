@@ -10,9 +10,9 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] 1.1 Create the Supabase project: organisation "AVA Verdict" (Startup, Free), project ava-verdict-staging, West Europe (London). URL: https://tzjbbsoyhiddgnwtkall.supabase.co (2026-10-23)
 - [x] 1.2 Save the project's keys and connection strings (password manager, never in chat or git). JWT signing: ECC (P-256), so SUPABASE_JWT_SECRET stays empty and the API verifies via JWKS (2026-10-23)
 - [x] 1.3 Apply migration 1: schema, security rules, audit log (2026-10-23)
-- [~] 1.4 Apply migration 2: data room file storage
-- [ ] 1.5 Apply migration 3: reference data
-- [ ] 1.6 Verify: tables present, row-level security on everywhere
+- [x] 1.4 Apply migration 2: data room file storage (2026-10-23)
+- [x] 1.5 Apply migration 3: reference data (2026-10-23)
+- [~] 1.6 Verify: run supabase/checks/verify_setup.sql, every row PASS
 - [ ] 1.7 Auth settings: email confirmation on, password minimum 12, site URL, redirect URLs
 - [ ] 1.8 Auth emails: custom SMTP (Resend) so sign-up emails are not rate-limited
 - [ ] 1.9 Enable pg_cron and pg_net (needed in Stage 3)
