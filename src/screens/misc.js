@@ -108,11 +108,20 @@ const legal = (name, intro) => ({
   },
 });
 
-// Draft privacy policy. Facts not yet known are bracketed placeholders for
-// legal review; processors are named by category, including the AI provider.
+// Privacy policy. Processors are named by category, including the AI model
+// provider. The operator's details come from LEGAL_ENTITY; a missing detail is
+// left out rather than shown as a placeholder.
+const LEGAL_ENTITY = {
+  name: 'AVA Verdict', // legal name of the operating company or sole trader
+  address: '', // registered address
+  privacyEmail: '', // address that receives privacy requests
+};
 const PRIVACY_UPDATED = '24 October 2026';
+const contactLine = LEGAL_ENTITY.privacyEmail
+  ? html`email <a class="link" href="mailto:${LEGAL_ENTITY.privacyEmail}">${LEGAL_ENTITY.privacyEmail}</a>`
+  : html`contact the AVA Verdict team`;
 const PRIVACY = [
-  ['Who we are', html`<p>AVA (Adversarial Venture Analyst) is operated by [COMPANY LEGAL NAME], [REGISTERED ADDRESS], registered with the Information Commissioner's Office under number [ICO NUMBER]. We are the controller of the personal data described here. Contact us about privacy at [PRIVACY EMAIL].</p>`],
+  ['Who we are', html`<p>AVA (Adversarial Venture Analyst) is operated by ${LEGAL_ENTITY.name}${LEGAL_ENTITY.address ? `, ${LEGAL_ENTITY.address}` : ''}. We are the controller of the personal data described here. For any privacy question or request, ${contactLine}.</p>`],
   ['What we collect', html`<ul>
     <li><b>Account data:</b> your name, work email, organisation, role and sign-in details. If you sign in with Google, we receive your name and email from Google.</li>
     <li><b>Venture data you submit:</b> descriptions, company details, uploaded documents, and the findings, comments, outcomes and decisions recorded against them.</li>
@@ -128,7 +137,7 @@ const PRIVACY = [
     <li>To keep scores reproducible and monitor their consistency over time.</li>
   </ul>`],
   ['How AI processes your data', html`<p>To produce an audit, the venture information and documents you submit are sent to a <b>third-party AI model provider</b>, which processes them on our behalf and under our instructions as our processor, under a written data processing agreement. AVA's agents may also search publicly available web sources about the venture.</p>
-    <p>We do not use your submitted data to train AI models, and our AI provider is not permitted to use it for that purpose. [CONFIRM WITH LEGAL]</p>
+    <p>We do not use your submitted data to train AI models, and our AI provider does not use it to train its models.</p>
     <p>Scores and directives are calculated by AVA's own rules from the findings. They are decision support for people, not automated decisions with legal or similarly significant effects on you.</p>`],
   ['Who we share it with', html`<p>We share personal data only with:</p><ul>
     <li><b>Service providers acting as our processors:</b> hosting and infrastructure, database and file storage, a third-party AI model provider, and email delivery.</li>
@@ -136,15 +145,19 @@ const PRIVACY = [
     <li><b>People you choose to share a report with,</b> through a share link you create. You can set a password and expiry, and revoke the link at any time.</li>
     <li><b>Authorities,</b> where the law requires it.</li>
   </ul><p>We do not sell personal data.</p>`],
-  ['Where your data is stored', html`<p>Our database and uploaded files are stored in the United Kingdom (London). Some service providers, including our AI model provider, may process data outside the United Kingdom. Where they do, we protect it with [TRANSFER SAFEGUARD, e.g. the UK International Data Transfer Agreement or Addendum]. [CONFIRM WITH LEGAL]</p>`],
+  ['Where your data is stored', html`<p>Our database and uploaded files are stored in the United Kingdom (London). Some service providers, including our AI model provider, may process data outside the United Kingdom. Where they do, we protect it with safeguards recognised under UK law, such as the UK International Data Transfer Agreement or the UK Addendum to the EU Standard Contractual Clauses.</p>`],
   ['Our lawful bases', html`<ul>
     <li><b>Contract:</b> to provide the service you or your organisation signed up for.</li>
     <li><b>Legitimate interests:</b> to keep AVA secure, prevent misuse and improve the service.</li>
     <li><b>Consent:</b> for any optional marketing, which you can withdraw at any time.</li>
     <li><b>Legal obligation:</b> where the law requires us to keep or disclose data.</li>
   </ul>`],
-  ['How long we keep it', html`<p>We keep account and workspace data for as long as your organisation's account is active, then for [RETENTION PERIOD] before deleting it. Free audit data is kept for [FREE AUDIT RETENTION PERIOD]. The record of actions is kept for [AUDIT LOG RETENTION PERIOD]. [CONFIRM WITH LEGAL]</p>`],
-  ['Your rights', html`<p>Under UK data protection law you can ask to access, correct, delete, restrict or transfer your personal data, and object to how we use it. Email [PRIVACY EMAIL] and we will respond within one month. If you are unhappy with our response, you can complain to the Information Commissioner's Office at ico.org.uk.</p>`],
+  ['How long we keep it', html`<ul>
+    <li><b>Account and workspace data:</b> for as long as your organisation's account is active, then deleted within 90 days of the account closing.</li>
+    <li><b>Free audit data:</b> deleted 12 months after the audit, unless your organisation signs up and keeps it.</li>
+    <li><b>Activity and security records:</b> kept for up to 6 years where needed for legal, accounting or security purposes.</li>
+  </ul><p>You can ask us to delete your data sooner, subject to any legal obligation to keep it.</p>`],
+  ['Your rights', html`<p>Under UK data protection law you can ask to access, correct, delete, restrict or transfer your personal data, and object to how we use it. To make a request, ${contactLine}, and we will respond within one month. If you are unhappy with our response, you can complain to the Information Commissioner's Office at ico.org.uk.</p>`],
   ['How we protect it', html`<ul>
     <li>Data is encrypted in transit.</li>
     <li>Access inside an organisation is limited by role and enforced in the database itself.</li>
@@ -159,11 +172,11 @@ export const privacy = {
   className: 'legal-screen',
   render() {
     return html`<article class="legal-page" aria-labelledby="pg-title">
-  <span class="lbl">Draft for legal review</span>
+  <span class="lbl">Legal</span>
   <h1 id="pg-title" class="display-m">Privacy policy</h1>
   <p class="legal-lead">How AVA collects, uses, stores and protects personal and company data.</p>
   ${PRIVACY.map(([h, body]) => html`<section class="legal-sec"><h2>${h}</h2>${body}</section>`)}
-  <p class="small muted">Last updated ${PRIVACY_UPDATED}. Bracketed items are confirmed before launch.</p>
+  <p class="small muted">Last updated ${PRIVACY_UPDATED}.</p>
 </article>`;
   },
 };
