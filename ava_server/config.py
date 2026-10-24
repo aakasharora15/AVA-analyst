@@ -47,7 +47,7 @@ class Settings:
         self.database_url = env("DATABASE_URL", "")
         self.supabase_url = env("SUPABASE_URL", "")
         self.supabase_jwt_secret = env("SUPABASE_JWT_SECRET", "")
-        self.cron_secret = env("CRON_SECRET", "")
+        self.cron_secret = env("CRON_SECRET", "").strip()  # copied values often carry a stray newline
         self.app_url = env("APP_URL", "http://localhost:5173")
         self.email_from = env("EMAIL_FROM", "AVA <alerts@example.com>")
         self.resend_api_key = env("RESEND_API_KEY", "")

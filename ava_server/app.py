@@ -108,6 +108,11 @@ def health():
         db_error = None
     required = ("database", "anthropic_key", "auth_verification", "cron_secret")
     out = {"ok": all(checks[k] for k in required), "checks": checks, "model": s.model}
+    if s.cron_secret:
+        # First 8 hex characters of SHA-256: enough to compare with the value in
+        # Supabase Vault, useless for recovering a 40-character random secret.
+        import hashlib
+        out["cron_secret_fingerprint"] = hashlib.sha256(s.cron_secret.encode()).hexdigest()[:8]
     if db_error:
         out["database_error"] = db_error
     return out

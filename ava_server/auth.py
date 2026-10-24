@@ -47,5 +47,5 @@ def current_user(authorization: str = Header(default="")) -> str:
 def cron_guard(authorization: str = Header(default="")) -> None:
     """Vercel sends `Authorization: Bearer <CRON_SECRET>` to scheduled jobs."""
     secret = settings().cron_secret
-    if not secret or not hmac.compare_digest(authorization, f"Bearer {secret}"):
+    if not secret or not hmac.compare_digest(authorization.strip(), f"Bearer {secret}"):
         raise HTTPException(401, "Not allowed")

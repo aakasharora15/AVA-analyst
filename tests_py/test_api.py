@@ -58,6 +58,8 @@ def test_health_reports_configuration_without_values(api, monkeypatch):
     r = client.get("/api/health").json()
     assert r["ok"] is True and r["checks"]["database"] is True
     assert "sk-test" not in str(r) and "cron-secret" not in str(r)
+    import hashlib
+    assert r["cron_secret_fingerprint"] == hashlib.sha256(b"cron-secret").hexdigest()[:8]
     monkeypatch.delenv("ANTHROPIC_API_KEY")
     assert client.get("/api/health").json()["ok"] is False
 
@@ -222,9 +224,11 @@ def test_outcome_logging_and_guard(api):
     assert client.post("/api/outcomes", json=ok, headers=as_(w, "Analyst")).status_code == 200
 
 
-def test_crons_need_the_secret_and_advance_audits(api):
+def test_crons_need_the_secret_and_advance_audits(api, monkeypatch):
     client, w = api
     assert client.get("/api/cron/advance").status_code == 401
+    monkeypatch.setenv("CRON_SECRET", "cron-secret\n")  # trailing newline from a copy-paste
+    assert client.get("/api/cron/email", headers={"Authorization": "Bearer cron-secret"}).status_code == 200
     aid = client.post("/api/audits", json={"companyId": w["company"]}, headers=as_(w, "Analyst")).json()["auditId"]
     cron = {"Authorization": "Bearer cron-secret"}
     for _ in range(10):
