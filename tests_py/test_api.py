@@ -10,7 +10,8 @@ from fastapi.testclient import TestClient
 from ava_server import db, lifecycle
 from ava_server.agents import AgentRunner
 from ava_server.config import Settings
-from tests_py.fakes import FakeClient
+from tests_py.conftest import DESC
+from tests_py.fakes import DEFAULT, FakeClient
 
 SECRET = "test-secret-at-least-32-bytes-long-000"
 
@@ -89,7 +90,7 @@ def test_analyst_runs_an_audit_end_to_end_and_viewer_cannot(api):
 
 def test_new_company_and_audit_in_one_call(api):
     client, w = api
-    body = {"orgId": w["org"], "company": {"title": "Newco", "industry": "Fintech", "country": "United Kingdom"}}
+    body = {"orgId": w["org"], "company": {"title": "Newco", "description": DESC, "industry": "Fintech", "country": "United Kingdom"}}
     r = client.post("/api/audits", json=body, headers=as_(w, "Analyst"))
     assert r.status_code == 200 and r.json()["companyId"]
     assert client.post("/api/audits", json=body, headers=as_(w, "Analyst")).status_code == 409
@@ -141,7 +142,7 @@ def test_share_link_guest_view_password_expiry_and_revoke(api):
 
 def test_import_validates_server_side_and_can_audit_all(api):
     client, w = api
-    rows = [{"title": "Alpha", "industry": "Fintech", "country": "UK"}, {"title": "alpha", "industry": "Fintech", "country": "UK"},
+    rows = [{"title": "Alpha", "description": DESC, "industry": "Fintech", "country": "UK"}, {"title": "alpha", "industry": "Fintech", "country": "UK"},
             {"title": "Beta", "industry": "", "country": "UK"}, {"title": f"Co {w['tag']}", "industry": "X", "country": "UK"}]
     assert client.post("/api/import", json={"orgId": w["org"], "file": "p.csv", "rows": rows}, headers=as_(w, "Viewer")).status_code == 403
     r = client.post("/api/import", json={"orgId": w["org"], "file": "p.csv", "rows": rows, "auditAll": True}, headers=as_(w, "Analyst")).json()
@@ -182,7 +183,7 @@ def test_onboarding_creates_org_with_owner(api):
 
 def test_free_audit_work_email_once_per_domain_and_locking(api):
     client, w = api
-    co = {"title": "Freeco", "industry": "Fintech", "country": "United Kingdom"}
+    co = {"title": "Freeco", "description": DESC, "industry": "Fintech", "country": "United Kingdom"}
     assert client.post("/api/free-audit", json={"email": "me@gmail.com", "company": co}).status_code == 422
     dom = f"acme{w['tag']}.example"
     fid = client.post("/api/free-audit", json={"email": f"me@{dom}", "company": co}).json()["id"]
@@ -290,3 +291,39 @@ def test_drift_report_hold_mode_and_manual_lift(api):
         ev = c.execute("select lift_reason, second_reviewer, affected_audits from hold_events order by started_at desc limit 1").fetchone()
     assert a["under_review"] is False and a["hold_resolution"] == "confirmed"
     assert ev["second_reviewer"] == "Risk reviewer" and ev["affected_audits"]
+
+
+def test_thin_or_nonsense_input_is_refused_before_any_model_call(api):
+    client, w = api
+    for desc in ("Facebook App Instagram App", "asdf qwrt zxcv bnmm hjkl asdf qwrt zxcv bnmm hjkl asdf qwrt zxcv bnmm hjkl"):
+        body = {"orgId": w["org"], "company": {"title": "Meta", "description": desc, "industry": "SaaS", "country": "GB"}}
+        r = client.post("/api/audits", json=body, headers=as_(w, "Analyst"))
+        assert r.status_code == 422 and r.json()["state"] == "insufficient"
+        free = client.post("/api/free-audit", json={"email": f"x@thin{w['tag']}.example", "company": body["company"]})
+        assert free.status_code == 422
+    with db.system() as c:
+        assert c.execute("select count(*) as n from companies where title = 'Meta'").fetchone()["n"] == 0
+
+
+def test_orchestrator_can_refuse_to_score(api, monkeypatch):
+    client, w = api
+    refusal = {**DEFAULT[6], "assessable": False, "assessable_reason": "The description names products but no customers, revenue or plan."}
+
+    def runner(*_a, **_k):
+        from ava_server.agents import AgentRunner
+        from ava_server.config import Settings
+        cfg = Settings(); cfg.refusal_fallback = "off"
+        return AgentRunner(client=FakeClient({6: [refusal]}), cfg=cfg)
+
+    monkeypatch.setattr(lifecycle, "AgentRunner", runner)
+    dom = f"refuse{w['tag']}.example"
+    co = {"title": "Vagueco", "description": DESC, "industry": "Fintech", "country": "United Kingdom"}
+    fid = client.post("/api/free-audit", json={"email": f"me@{dom}", "company": co}).json()["id"]
+    finish(client, {}, fid, "/api/free-audit/{}/advance")
+    r = client.get(f"/api/free-audit/{fid}").json()
+    assert r["status"] == "failed" and "customers" in r["reason"] and "score" not in r
+    with db.system() as c:
+        a = c.execute("select a.score, a.final_directive, a.counted_against_usage from audits a join free_audits f on f.audit_id = a.id where f.id = %s", (fid,)).fetchone()
+    assert a["score"] is None and a["final_directive"] is None and a["counted_against_usage"] is False
+    # A refused audit does not use up the domain's free audit for the month.
+    assert client.post("/api/free-audit", json={"email": f"you@{dom}", "company": co}).status_code == 200

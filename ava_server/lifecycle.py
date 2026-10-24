@@ -16,6 +16,7 @@ from . import db, emailer
 from .agents import AgentError, AgentRunner, build_context
 from .config import AGENTS, CALIBRATION, CALIBRATIONS, SECTIONS, settings
 from .engine import score_audit, score_excluding_dismissed
+from .quality import input_problem
 from .rules import checkpoints, evaluate_alerts
 
 STALE_MINUTES = 10
@@ -44,8 +45,19 @@ def snapshot(company: dict, sources: list[dict]) -> tuple[dict, str]:
     return snap, digest
 
 
+class InsufficientInput(ValueError):
+    """The venture inputs cannot support an audit (see quality.py)."""
+
+
 def create_audit(user_id: str | None, company_id: str, trigger: str = "manual", notify: bool = False) -> str:
-    """Queue an audit. The insert runs as the user so RLS enforces who may run audits."""
+    """Queue an audit. The insert runs as the user so RLS enforces who may run audits.
+    Refuses inputs AVA cannot assess, before any model call is made."""
+    with db.system() as c:
+        co = c.execute("select title, description from companies where id = %s", (company_id,)).fetchone()
+    if co:
+        problem = input_problem(co)
+        if problem:
+            raise InsufficientInput(problem)
     if user_id:
         with db.as_user(user_id) as c:
             row = c.execute("select org_id from companies where id = %s", (company_id,)).fetchone()
@@ -240,6 +252,12 @@ def finalise(audit_id: str) -> None:
     failed = [n for n, r in runs.items() if r["status"] == "failed"]
     orchestrator_failed = 6 in failed
     st = "failed" if orchestrator_failed else ("partial" if failed else "complete")
+    o6 = (runs.get(6) or {}).get("output") or {}
+    # The Orchestrator judged the inputs too thin, vague or nonsensical to score:
+    # no score, no directive, not counted against usage.
+    insufficient = not orchestrator_failed and o6.get("assessable") is False
+    if insufficient:
+        st = "failed"
     cal = CALIBRATIONS.get(a["calibration_version"]) or CALIBRATION
     o = (runs.get(6) or {}).get("output") or {}
     override = None
@@ -259,6 +277,9 @@ def finalise(audit_id: str) -> None:
             "run_seconds": int((_now() - a["started_at"]).total_seconds()) if a["started_at"] else None,
             "under_review": bool(org["hold_mode"]),
         }
+        if insufficient:
+            update["run_state"] = db.jsonb({**(a["run_state"] or {}), "outcome": "insufficient_information",
+                                            "reason": o6.get("assessable_reason") or "The inputs were too thin to assess."})
         if st != "failed":
             excl = score_excluding_dismissed(findings, company["type"], cal)
             cp = checkpoints(today)
@@ -281,6 +302,9 @@ def finalise(audit_id: str) -> None:
                 update["drift_flag"] = True
         cols = ", ".join(f"{k} = %s" for k in update)
         c.execute(f"update audits set {cols} where id = %s", (*update.values(), audit_id))
+        if insufficient:
+            c.execute("insert into audit_log (org_id, who, action, object_type, object_id, detail) values (%s, 'AVA', 'audit.insufficient', 'audits', %s, %s)",
+                      (a["org_id"], audit_id, f"No score issued: {update['run_state'].obj['reason']}"))
         if result.get("overrideRejected"):
             c.execute("insert into audit_log (org_id, who, action, object_type, object_id, detail) values (%s, 'AVA', 'audit.override_rejected', 'audits', %s, %s)",
                       (a["org_id"], audit_id, f"Orchestrator override rejected: {result['overrideRejected']}"))

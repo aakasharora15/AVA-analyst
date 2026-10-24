@@ -27,6 +27,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from . import db, drift, emailer, lifecycle, scheduling
+from .quality import input_problem
 from .auth import cron_guard, current_user
 from .config import settings
 
@@ -51,6 +52,11 @@ async def _pg_error(_: Request, exc: psycopg.Error):
 @app.exception_handler(HTTPException)
 async def _http_error(_: Request, exc: HTTPException):
     return JSONResponse({"error": exc.detail}, status_code=exc.status_code)
+
+
+@app.exception_handler(lifecycle.InsufficientInput)
+async def _insufficient(_: Request, exc: lifecycle.InsufficientInput):
+    return JSONResponse({"error": str(exc), "state": "insufficient"}, status_code=422)
 
 
 @app.exception_handler(PermissionError)
@@ -180,6 +186,9 @@ def start_audit(body: AuditIn, user: str = Depends(current_user)):
     if not company_id:
         if not body.company or not body.orgId:
             raise HTTPException(422, "Choose a company or add one")
+        problem = input_problem(body.company.model_dump())
+        if problem:
+            raise lifecycle.InsufficientInput(problem)
         with db.as_user(user) as c:
             company_id = _insert_company(c, body.orgId, user, body.company)
     with db.system() as c:
@@ -501,8 +510,14 @@ def import_companies(body: ImportIn, user: str = Depends(current_user)):
             created.append(_insert_company(c, body.orgId, user, co))
         c.execute("insert into import_jobs (org_id, file, mapping, rows_valid, rows_rejected, created_by) values (%s, %s, %s, %s, %s, %s)",
                   (body.orgId, body.file, db.jsonb(body.mapping), len(created), len(rejected), user))
-    audits = [lifecycle.create_audit(user, cid, trigger="import") for cid in created] if body.auditAll else []
-    return {"created": created, "rejected": rejected, "audits": audits}
+    audits, not_audited = [], []
+    if body.auditAll:
+        for cid in created:
+            try:
+                audits.append(lifecycle.create_audit(user, cid, trigger="import"))
+            except lifecycle.InsufficientInput:
+                not_audited.append(cid)  # added, but the description is too thin to audit yet
+    return {"created": created, "rejected": rejected, "audits": audits, "notAudited": not_audited}
 
 
 # ---------------------------------------------------------------------------
@@ -686,8 +701,13 @@ def free_audit(body: FreeIn):
     domain = m.group(1)
     if domain in settings().free_email_domains:
         raise HTTPException(422, "Use your work email. Personal email addresses are not eligible.")
+    problem = input_problem(body.company.model_dump())
+    if problem:
+        raise lifecycle.InsufficientInput(problem)
     with db.system("Free audit") as c:
-        recent = c.execute("select 1 from free_audits where domain = %s and created_at > now() - interval '1 month'", (domain,)).fetchone()
+        # Audits that issued no score (failed or insufficient input) do not use up the month's free audit.
+        recent = c.execute("select 1 from free_audits f join audits a on a.id = f.audit_id where f.domain = %s "
+                           "and f.created_at > now() - interval '1 month' and a.status <> 'failed'", (domain,)).fetchone()
         if recent:
             raise HTTPException(429, "Your organisation has already used its free audit this month")
         co = body.company
@@ -725,6 +745,10 @@ def free_result(fid: str):
     f = _free(fid)
     st = lifecycle.status(f["audit_id"])
     out = {"id": fid, "status": st["audit"]["status"], "agents": st["agents"], "company": f["inputs"]}
+    if st["audit"]["status"] == "failed":
+        with db.system() as c:
+            rs = c.execute("select run_state from audits where id = %s", (f["audit_id"],)).fetchone()["run_state"] or {}
+        out["reason"] = rs.get("reason") if rs.get("outcome") == "insufficient_information" else None
     if st["audit"]["status"] in ("complete", "partial"):
         with db.system() as c:
             a = c.execute("select score, final_directive, coverage from audits where id = %s", (f["audit_id"],)).fetchone()

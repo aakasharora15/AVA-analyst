@@ -54,7 +54,11 @@ def queue_due(today: date | None = None) -> list[str]:
             running = c.execute("select 1 from audits where company_id = %s and status in ('queued', 'running')", (row["id"],)).fetchone()
         if running:
             continue
-        queued.append(create_audit(None, row["id"], trigger="scheduled"))
+        from .lifecycle import InsufficientInput
+        try:
+            queued.append(create_audit(None, row["id"], trigger="scheduled"))
+        except InsufficientInput:
+            pass  # description too thin to audit; next_run still moves on below
         with db.system() as c:
             org = {"default_cadence": row["default_cadence"]}
             c.execute("update companies set scheduled_audit = null, next_run = %s where id = %s",

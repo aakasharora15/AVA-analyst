@@ -71,6 +71,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Log
 
+- 2026-10-24: Honest-score gate: thin or nonsense inputs are refused before any model call (quality.py, mirrored in the forms), and the Orchestrator can decline to score (assessable=false) with no score issued and no usage counted. Free audit always runs for real, even with the demo open. Prompts edited in place while still unapproved.
 - 2026-10-24: Cron jobs fixed: Vault held a placeholder app URL and cron secret. cron.sql now refuses placeholders and updates existing values; the API strips stray whitespace from the secret; /api/health shows a cron secret fingerprint to compare with Vault.
 - 2026-10-23: Staging project created. Not linked to GitHub; migrations applied by hand. Data API on, auto-expose off, automatic RLS on.
 - 2026-10-23: Removed the pgcrypto dependency from migration 1 so it applies cleanly on Supabase. Checklist created.

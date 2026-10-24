@@ -26,7 +26,7 @@ DEFAULT = {
     4: {"summary": "s", "findings": [finding("psy", "Customer psychology", "LOW", "price-switching")], "skipped_sections": []},
     5: {"summary": "s", "findings": [finding("reg", "Regulatory", "LOW", "licence")], "skipped_sections": [{"section": "ip", "reason": "No legal material supplied."}]},
     6: {"rationale": "Real demand, broken economics.", "investor_perspective": "Not yet.", "roadmap": "Fix pricing.",
-        "top_risks": [], "override": {"apply": False, "to": "HOLD", "finding_ids": [], "reason": ""}},
+        "top_risks": [], "assessable": True, "assessable_reason": "", "override": {"apply": False, "to": "HOLD", "finding_ids": [], "reason": ""}},
 }
 
 

@@ -20,7 +20,7 @@ import { AGENTS, CALIBRATION, CATEGORIES, SECTIONS } from '../engine/config.js';
 import { scoreAudit } from '../engine/score.js';
 import { evaluateAlerts } from '../engine/alerts.js';
 import { checkpoints, outcomeStatus } from '../engine/outcomes.js';
-import { roleCan, checkEmailFormat, addDays, computeNextRun as nextRunFor, kindOf, pickAudit, enrichAudit, lockFindings, todayIso } from './shared.js';
+import { inputProblem, roleCan, checkEmailFormat, addDays, computeNextRun as nextRunFor, kindOf, pickAudit, enrichAudit, lockFindings, todayIso } from './shared.js';
 
 export const MODE = 'mock';
 
@@ -734,6 +734,8 @@ export function checkWorkEmail(email) {
 export async function runFreeAudit(input, { onProgress = () => {} } = {}) {
   const check = checkWorkEmail(input.email);
   if (!check.ok) throw new Error(check.reason);
+  const problem = inputProblem(input);
+  if (problem) throw new Error(problem);
   for (let i = 0; i < AGENTS.length; i += 1) {
     onProgress(i);
     await wait(450);

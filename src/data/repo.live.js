@@ -306,6 +306,7 @@ function mapAudit(a, findings = [], runs = []) {
     snapshotHash: a.snapshot_hash, modelVersion: a.model_version, promptVersion: a.prompt_version, underReview: !!a.under_review, driftFlag: !!a.drift_flag,
     outcomeWindowVersion: a.outcome_window_version, firstCheckpoint: a.first_checkpoint, finalCheckpoint: a.final_checkpoint,
     createdAt: a.created_at,
+    outcome: (a.run_state || {}).outcome || null, outcomeReason: (a.run_state || {}).reason || null,
   };
 }
 
@@ -720,7 +721,11 @@ export async function runFreeAudit(input, { onProgress = () => {} } = {}) {
     if (['complete', 'partial', 'failed'].includes(st.audit.status)) break;
   }
   const r = await api(`/free-audit/${id}`, { method: 'GET', auth: false });
-  if (r.status === 'failed') throw new Error('The audit could not finish. You have not used your free audit; try again later.');
+  if (r.status === 'failed') {
+    throw new Error(r.reason
+      ? `No score issued. ${r.reason} This did not use up your free audit; add the detail and run it again.`
+      : 'The audit could not finish. You have not used your free audit; try again later.');
+  }
   return { id, inputs: input, status: r.status, score: r.score, directive: r.directive, top: r.top, locked: r.locked, prototype: false };
 }
 

@@ -39,6 +39,25 @@ export function passwordProblem(pw) {
   return ok ? null : PASSWORD_RULE;
 }
 
+// Input quality gate, mirroring ava_server/quality.py: AVA refuses to score a
+// venture it cannot assess. The server applies the same rules.
+const WORD = /[A-Za-zÀ-ÿ']+/g;
+const VOWELS = /[aeiouyàáâäèéêëìíîïòóôöùúûü]/i;
+export function inputProblem({ title = '', description = '' } = {}) {
+  if (!(String(title).match(WORD) || []).length) return 'Give the venture a real name.';
+  const desc = String(description).trim();
+  const words = desc.match(WORD) || [];
+  if (desc.length < 80 || words.length < 12) {
+    return 'Describe the venture in at least 80 characters: what it does, who pays, how it makes money and what exists today. AVA cannot score a venture it cannot assess.';
+  }
+  const long = words.filter((w) => w.length >= 3).map((w) => w.toLowerCase());
+  const mash = long.filter((w) => !VOWELS.test(w) || /(.)\1{3,}/.test(w)).length / (long.length || 1);
+  if (new Set(words.filter((w) => w.length >= 4).map((w) => w.toLowerCase())).size < 6 || mash > 0.3) {
+    return 'The description does not read as a real business. Describe what it does, who pays and how it makes money. AVA cannot score a venture it cannot assess.';
+  }
+  return null;
+}
+
 export const todayIso = () => new Date().toISOString().slice(0, 10);
 
 export function addDays(iso, days) {

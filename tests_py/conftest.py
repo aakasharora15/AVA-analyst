@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 ROLES = ["Owner", "Admin", "Analyst", "Viewer"]
+DESC = "Clinic software that books physiotherapy appointments for private practices in the UK, paid monthly per clinician, with 40 paying clinics today."
 
 
 def _apply(conn, path: Path):
@@ -57,7 +58,7 @@ def world(database_url):
             if role != "Guest":
                 c.execute("insert into memberships (org_id, user_id, role) values (%s, %s, %s)", (org, uid, role))
             users[role] = str(uid)
-        company = c.execute("insert into companies (org_id, title, industry, country) values (%s, %s, 'Healthcare', 'United Kingdom') returning id", (org, f"Co {tag}")).fetchone()["id"]
+        company = c.execute("insert into companies (org_id, title, description, industry, country) values (%s, %s, %s, 'Healthcare', 'United Kingdom') returning id", (org, f"Co {tag}", DESC)).fetchone()["id"]
         audit = c.execute("insert into audits (org_id, company_id, status, score, final_directive) values (%s, %s, 'complete', 50, 'HOLD') returning id", (org, company)).fetchone()["id"]
         finding = c.execute(
             "insert into findings (audit_id, org_id, company_id, agent, section, category, severity, match_key, title, text) "

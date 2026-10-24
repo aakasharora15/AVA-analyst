@@ -76,7 +76,9 @@ export const CATEGORIES = primary.CATEGORIES;
 
 export const can = (...a) => impl().can(...a);
 export const effectiveCadence = (...a) => impl().effectiveCadence(...a);
-export const checkWorkEmail = (...a) => impl().checkWorkEmail(...a);
+// The free audit is a public page: it always runs for real, even in a browser
+// that has the demo workspace open.
+export const checkWorkEmail = (...a) => primary.checkWorkEmail(...a);
 
 export const getSession = (...a) => impl().getSession(...a);
 export const signUp = (...a) => impl().signUp(...a);
@@ -127,8 +129,8 @@ export const revokeShareLink = (...a) => impl().revokeShareLink(...a);
 export const openSharedReport = (...a) => impl().openSharedReport(...a);
 export const existingTitles = (...a) => impl().existingTitles(...a);
 export const importCompanies = (...a) => impl().importCompanies(...a);
-export const runFreeAudit = (...a) => impl().runFreeAudit(...a);
-export const sendFreeAudit = (...a) => impl().sendFreeAudit(...a);
+export const runFreeAudit = (...a) => primary.runFreeAudit(...a);
+export const sendFreeAudit = (...a) => primary.sendFreeAudit(...a);
 export const getAuditLog = (...a) => impl().getAuditLog(...a);
 export const recordExport = (...a) => impl().recordExport(...a);
 export const resetDemo = (...a) => impl().resetDemo(...a);

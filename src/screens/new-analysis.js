@@ -1,4 +1,5 @@
 import { html } from '../lib/html.js';
+import { inputProblem } from '../data/shared.js';
 import { runAudit, getCompany, can } from '../data/repo.js';
 import { TYPE_LABEL } from '../components/ui.js';
 import { toast } from '../components/sheet.js';
@@ -17,7 +18,7 @@ function depth(v, files) {
 function errorsFor(v) {
   return {
     title: !String(v.title || '').trim() && 'Enter a title for the venture.',
-    description: !String(v.description || '').trim() && 'Describe the venture so the agents have something to attack.',
+    description: (!String(v.description || '').trim() && 'Describe the venture so the agents have something to attack.') || (String(v.title || '').trim() && inputProblem(v)),
     industry: !v.industry && 'Choose an industry.',
     country: !String(v.country || '').trim() && 'Enter a country.',
     type: !v.type && 'Choose a venture type.',

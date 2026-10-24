@@ -72,6 +72,8 @@ def agent_schema(agent_n: int) -> dict:
                 "investor_perspective": {"type": "string"},
                 "roadmap": {"type": "string"},
                 "top_risks": {"type": "array", "items": {"type": "string"}},
+                "assessable": {"type": "boolean"},
+                "assessable_reason": {"type": "string"},
                 "override": {
                     "type": "object",
                     "properties": {
@@ -84,7 +86,7 @@ def agent_schema(agent_n: int) -> dict:
                     "additionalProperties": False,
                 },
             },
-            "required": ["rationale", "investor_perspective", "roadmap", "top_risks", "override"],
+            "required": ["rationale", "investor_perspective", "roadmap", "top_risks", "assessable", "assessable_reason", "override"],
             "additionalProperties": False,
         }
     sections = [s["id"] for s in SECTIONS if s["agent"] == agent_n]

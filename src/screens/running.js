@@ -123,7 +123,9 @@ export default {
         clearInterval(timer);
         const status = r.audit.status;
         if (status === 'failed') {
-          summary.textContent = 'The audit failed. No score or directive was issued.';
+          summary.textContent = r.audit.outcome === 'insufficient_information'
+            ? 'No score issued: there was not enough real information to assess this venture.'
+            : 'The audit failed. No score or directive was issued.';
           live.insertAdjacentHTML('beforeend', String(html`<div class="row-actions"><a class="btn btn-primary" href="/report/${id}">Open the failed audit</a></div>`));
           return;
         }

@@ -1,5 +1,6 @@
 import { html } from '../lib/html.js';
 import { checkWorkEmail, runFreeAudit, sendFreeAudit } from '../data/repo.js';
+import { inputProblem } from '../data/shared.js';
 import { AGENTS } from '../engine/config.js';
 import { meter, sevTag, vClass, icon } from '../components/ui.js';
 import { toast } from '../components/sheet.js';
@@ -78,7 +79,7 @@ export default {
       const mail = checkWorkEmail(v.email || '');
       return {
         title: !String(v.title || '').trim() && 'Enter a title.',
-        description: String(v.description || '').trim().length < 20 && 'Describe the venture in at least 20 characters.',
+        description: !!String(v.title || '').trim() && inputProblem(v),
         industry: !v.industry && 'Choose an industry.',
         country: !String(v.country || '').trim() && 'Enter a country.',
         email: !mail.ok && mail.reason,

@@ -439,8 +439,11 @@ ${guest ? '' : html`<section aria-label="Next steps" class="hero-panel r-close">
 }
 
 function failedView(a) {
+  if (a.outcome === 'insufficient_information') {
+    return html`<div class="banner banner-warn" role="alert"><div class="stack-sm"><b>No score issued: not enough to assess.</b><span class="small">${a.outcomeReason} AVA does not score a venture it cannot assess. This audit does not count against usage.</span></div><a class="btn btn-primary" href="/company/${a.companyId}">Add detail and run again</a></div>`;
+  }
   return html`<div class="banner banner-bad" role="alert"><div class="stack-sm"><b>This audit failed.</b><span class="small">The Orchestrator returned no valid output after one automatic retry. No score or directive was issued, and this audit does not count against usage.</span></div><a class="btn btn-primary" href="/company/${a.companyId}?reaudit=1">Run it again</a></div>
-<div class="page-head-copy"><span class="lbl">Audit ${fmtDate(a.date)} · Failed</span><h1 class="page-title">${a.company.title}</h1></div>
+<div class="page-head-copy"><span class="lbl">Audit ${fmtDate(a.date)} · ${a.outcome === 'insufficient_information' ? 'No score' : 'Failed'}</span><h1 class="page-title">${a.company.title}</h1></div>
 <section class="card card-pad stack-md" aria-label="Agent runs">
   <h2 class="r-h2">Agent runs</h2>
   <ul class="stack-sm">${a.agentRuns.map((r) => html`<li class="run-finding"><span class="tag ${r.status === 'failed' ? 'sev-high' : 'v-proceed verdict'}">${r.status === 'failed' ? 'FAILED' : 'COMPLETE'}</span><div class="stack-sm"><b>${AGENTS[r.agent - 1].name}</b><span class="small muted">${r.status === 'failed' ? `${r.error} Output schema: ${r.schema}.` : `${r.findings} findings in ${r.duration} s.`}</span></div></li>`)}</ul>
