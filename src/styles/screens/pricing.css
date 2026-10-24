@@ -48,3 +48,19 @@
 /* Unit always on its own line, so every plan card lines up. */
 .p-plan-price { flex-wrap: wrap; }
 .p-plan-unit { flex-basis: 100%; }
+
+/* Plan comparison table */
+.p-compare { padding: 2rem 2.25rem; display: flex; flex-direction: column; gap: 1.25rem; }
+.p-compare-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+.p-compare-scroll { overflow-x: auto; max-width: 100%; }
+.p-compare-scroll:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 4px; border-radius: 8px; }
+.p-table { width: 100%; min-width: 44rem; border-collapse: collapse; font-size: .9375rem; }
+.p-table th, .p-table td { padding: .75rem .875rem; text-align: center; border-bottom: 1px solid var(--line); }
+.p-table thead th { font-weight: 700; vertical-align: bottom; }
+.p-table tbody th { text-align: left; font-weight: 500; color: var(--text); }
+.p-table td { color: var(--text-muted); }
+.p-th-price { display: block; font-weight: 500; font-size: .8125rem; color: var(--text-muted); margin-top: .125rem; }
+.p-yes { color: var(--proceed); font-weight: 700; }
+.p-no { color: var(--text-muted); }
+.p-table tbody th { position: sticky; left: 0; background: var(--surface); }
+@media (max-width: 600px) { .p-compare { padding: 1.5rem 1.25rem; } }

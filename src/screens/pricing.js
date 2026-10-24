@@ -24,6 +24,33 @@ const cards = () => [
   })),
 ];
 
+// Plan comparison. Columns: Free, then PLANS, then Enterprise. true = included,
+// false = not included, a string = a specific value.
+const COMPARE = [
+  ['Same scoring engine and honest verdict', true, true, true, true, true],
+  ['Audits a month', '1 per domain', ...PLANS.map((p) => String(p.audits)), 'Custom'],
+  ['Seats', '1', ...PLANS.map((p) => String(p.seats)), 'Custom'],
+  ['Ideas, campaigns, strategies and startups', true, true, true, true, true],
+  ['Findings with cited evidence', 'Top three', true, true, true, true],
+  ['PDF export and share links', false, true, true, true, true],
+  ['Monitoring and alerts', false, false, true, true, true],
+  ['Audit history and comparison', false, false, true, true, true],
+  ['Data room', false, false, true, true, true],
+  ['Benchmarks and outcome tracking', false, false, true, true, true],
+  ['Deep audit: extended analysis', false, false, false, true, true],
+  ['Portfolio overview', false, false, false, true, true],
+  ['Team roles and permissions', false, false, false, true, true],
+  ['Branded reports', false, false, false, true, true],
+  ['Priority support', false, false, false, true, true],
+  ['Single sign-on', false, false, false, false, true],
+  ['Custom retention and onboarding', false, false, false, false, true],
+];
+const cell = (v) => (v === true
+  ? html`<td><span class="p-yes" aria-hidden="true">✓</span><span class="sr-only">Included</span></td>`
+  : v === false
+    ? html`<td><span class="p-no" aria-hidden="true">–</span><span class="sr-only">Not included</span></td>`
+    : html`<td>${v}</td>`);
+
 export default {
   title: 'Pricing · AVA',
 
@@ -47,8 +74,18 @@ export default {
   </article>`)}
 </section>
 
+<section class="card p-compare" aria-labelledby="compare-title">
+  <h2 id="compare-title" class="p-compare-title">Compare plans</h2>
+  <div class="p-compare-scroll" tabindex="0" role="region" aria-label="Plan comparison table, scrolls sideways on small screens">
+    <table class="p-table">
+      <thead><tr><th scope="col"><span class="sr-only">Feature</span></th><th scope="col">Free</th>${PLANS.map((p) => html`<th scope="col">${p.name}<span class="p-th-price">${p.price}</span></th>`)}<th scope="col">Enterprise<span class="p-th-price">Custom</span></th></tr></thead>
+      <tbody>${COMPARE.map(([label, ...vals]) => html`<tr><th scope="row">${label}</th>${vals.map(cell)}</tr>`)}</tbody>
+    </table>
+  </div>
+</section>
+
 <section class="card p-note">
-  <div class="p-note-copy"><b>Need more than Pro Max?</b><span class="muted">Enterprise plans add single sign-on, custom audit volumes, data retention terms and dedicated onboarding.</span></div>
+  <div class="p-note-copy"><b>Need more than Pro Max?</b><span class="muted">Enterprise plans add single sign-on, custom audit volumes and Deep audits, data retention terms and dedicated onboarding.</span></div>
   <a class="btn btn-primary" href="${contactHref(BUSINESS.salesEmail, '/sign-in?demo=1', 'AVA Enterprise')}"${BUSINESS.salesEmail ? html` data-external` : ''}>${BUSINESS.salesEmail ? 'Contact sales' : 'Explore the live demo'}</a>
 </section>`;
   },
