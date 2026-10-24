@@ -34,7 +34,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Stage 4. Staging walkthrough (live mode, real Supabase)
 
-- [~] 4.1 Set VITE_AVA_DATA=live and redeploy
+- [x] 4.1 Set VITE_AVA_DATA=live and redeploy (2026-10-24)
 - [ ] 4.2 Sign up, verify email, onboard
 - [ ] 4.3 Add a company, upload a PDF, run a full audit on the real Claude API
 - [ ] 4.4 Record cost and run time of one audit
