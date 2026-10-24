@@ -17,7 +17,7 @@ import alerts from './screens/alerts.js';
 import dataRoom from './screens/data-room.js';
 import exportScreen from './screens/export.js';
 import account from './screens/account.js';
-import { shared, invite, noAccess, maintenance, privacy, terms, trust } from './screens/misc.js';
+import { shared, invite, noAccess, maintenance, privacy, terms, trust, demo } from './screens/misc.js';
 
 // layout: 'public' = site header and footer; 'app' = signed-in app header;
 // 'bare' = no chrome.
@@ -51,4 +51,5 @@ export const routes = [
   { path: '/export', screen: exportScreen, layout: 'app' },
   { path: '/account', screen: account, layout: 'app' },
   { path: '/no-access', screen: noAccess, layout: 'app' },
+  { path: '/demo', screen: demo, layout: 'bare' },
 ];

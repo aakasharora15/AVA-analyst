@@ -1,6 +1,6 @@
 import { html } from '../lib/html.js';
 import { PASSWORD_RULE, passwordProblem } from '../data/shared.js';
-import { MODE, signIn, signInWithProvider, signUp, getSession, requestPasswordReset, updatePassword, signInWithSso, resendVerification } from '../data/repo.js';
+import { MODE, DEMO_EMAIL, DEMO_PASSWORD, signIn, signInWithProvider, signUp, getSession, requestPasswordReset, updatePassword, signInWithSso, resendVerification } from '../data/repo.js';
 import { wordmarkSvg } from '../components/logo.js';
 
 // Auth states (spec 4.12), opened with ?state=<name>. In the demo (mock data)
@@ -48,7 +48,13 @@ function panel(ctx) {
       <button type="submit" class="btn btn-primary btn-lg" data-submit>${isIn ? 'Sign in' : 'Create account'}</button>
       ${isIn ? html`<a class="link small" href="/sign-in?state=forgot">Forgot password?</a>` : html`<p class="hint">[TERMS] and [PRIVACY] apply. We will send a link to verify your email.</p>`}
     </form>
-    <p class="small muted">Invited by a colleague? Use the link in your invitation email.${demo ? ' Demo: the sample account is filled in.' : ''}</p>
+    ${isIn ? html`<div class="card card-pad stack-sm si-demo" role="note">
+      <b>Exploring AVA?</b>
+      <span class="small muted">Sign in to the demo workspace with sample data. Nothing you do there is saved to a real account.</span>
+      <span class="small si-demo-cred">Email <code>${DEMO_EMAIL}</code> · Password <code>${DEMO_PASSWORD}</code></span>
+      <a class="link small" href="/demo">Open the demo in one click</a>
+    </div>` : ''}
+    <p class="small muted">Invited by a colleague? Use the link in your invitation email.</p>
   </div>`;
 }
 

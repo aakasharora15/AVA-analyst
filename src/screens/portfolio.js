@@ -1,5 +1,5 @@
 import { html } from '../lib/html.js';
-import { MODE, getCompanies, getOrg, importCompanies, existingTitles, can, effectiveCadence } from '../data/repo.js';
+import { MODE, DEMO, getCompanies, getOrg, importCompanies, existingTitles, can, effectiveCadence } from '../data/repo.js';
 import { fmtDate, verdictTag, deltaText, deltaClass, vClass, TYPE_LABEL, segmented, icon } from '../components/ui.js';
 import { openSheet, toast } from '../components/sheet.js';
 import { DIRECTIVES, VENTURE_TYPES } from '../engine/config.js';
@@ -228,7 +228,7 @@ export default {
 
   render(ctx, { companies, org }) {
     const pref = loadPref('portfolio', { filter: 'ALL', sort: 'score', type: 'all', view: 'list' });
-    const empty = (MODE === 'mock' && pref.view === 'empty') || companies.length === 0;
+    const empty = (MODE === 'mock' && !DEMO && pref.view === 'empty') || companies.length === 0;
     const scored = companies.filter((c) => c.latest);
     const mix = Object.fromEntries(DIRECTIVES.map((d) => [d, scored.filter((c) => c.latest.finalDirective === d).length]));
     const avg = scored.length ? (scored.reduce((s, c) => s + c.latest.score, 0) / scored.length).toFixed(1) : '–';
@@ -243,7 +243,7 @@ export default {
   <div class="page-head-copy"><h1 class="page-title">Portfolio risk overview</h1><p class="muted page-sub">Every monitored company, its current verdict and which way it is moving. Sample data.</p></div>
   <div class="row-actions">
     ${can('runAudits') ? html`<button type="button" class="btn" data-import>${icon('upload', { size: 18 })}Import CSV</button>` : ''}
-    ${MODE === 'mock' ? segmented('view', [{ key: 'list', label: 'Populated' }, { key: 'empty', label: 'First use' }], empty ? 'empty' : 'list', { label: 'Preview state' }) : ''}
+    ${MODE === 'mock' && !DEMO ? segmented('view', [{ key: 'list', label: 'Populated' }, { key: 'empty', label: 'First use' }], empty ? 'empty' : 'list', { label: 'Preview state' }) : ''}
   </div>
 </div>
 ${empty ? html`

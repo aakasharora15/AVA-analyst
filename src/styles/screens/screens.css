@@ -356,3 +356,6 @@ button.dr-row[aria-pressed='true'] { border-color: rgba(170, 160, 255, .7); }
   .ac-log .ac-row > :nth-child(1) { grid-column: auto; }
   .ac-log .ac-row > :nth-child(3) { grid-column: 1 / -1; }
 }
+
+/* Demo login note on the sign-in screen */
+.si-demo code, .l-demo-cred code { font-family: var(--font-mono, ui-monospace, monospace); font-size: .8125rem; color: var(--text); user-select: all; }

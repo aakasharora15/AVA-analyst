@@ -1,5 +1,5 @@
 import { html } from '../lib/html.js';
-import { MODE, getRun, getCompany, setRunDebug, notifyOnComplete } from '../data/repo.js';
+import { MODE, DEMO, getRun, getCompany, setRunDebug, notifyOnComplete } from '../data/repo.js';
 import { AGENTS } from '../engine/config.js';
 import { fmtDate, sevTag } from '../components/ui.js';
 import { toast } from '../components/sheet.js';
@@ -90,7 +90,7 @@ export default {
     <h1 class="page-title">${company.title}</h1>
     <p class="muted page-sub" aria-live="polite" data-run-summary>Results appear here as each agent finishes. The audit keeps running if you leave this page.</p>
   </div>
-  ${MODE === 'mock' ? html`<details class="card run-debug">
+  ${MODE === 'mock' && !DEMO ? html`<details class="card run-debug">
     <summary>Debug: simulate a failure</summary>
     <div class="stack-md">
       <div class="fld"><label for="dbg-agent">Agent to fail</label>

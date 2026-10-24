@@ -249,7 +249,7 @@ export default {
         toast('Audit log exported.');
       }
       if (e.target.closest('[data-invoice]')) toast('Invoices are issued by the billing team. [BILLING CONTACT]');
-      if (e.target.closest('[data-signout]')) { await signOut(); ctx.navigate('/sign-in'); }
+      if (e.target.closest('[data-signout]')) { ctx.navigate(await signOut()); }
       if (e.target.closest('[data-reset]')) { await resetDemo(); toast('Demo data reset.'); ctx.refresh(); }
       if (e.target.closest('[data-delete-org]')) {
         openSheet({

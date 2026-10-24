@@ -15,7 +15,7 @@ import { notFound } from './screens/not-found.js';
 import { siteHeader, mountSiteHeader } from './components/site-header.js';
 import { siteFooter } from './components/site-footer.js';
 import { appHeader, mountAppHeader } from './components/app-header.js';
-import { getSession } from './data/repo.js';
+import { getSession, signOut, DEMO } from './data/repo.js';
 
 const app = document.getElementById('app');
 
@@ -28,6 +28,7 @@ function frame(route, ctx) {
   }
   if (layout === 'app') {
     return html`${appHeader({ path: ctx.path })}
+${DEMO ? html`<div class="wrap wrap-app"><div class="demo-bar" role="note"><span><b>Demo workspace.</b> Sample data. Changes stay in this browser.</span><span class="demo-bar-actions"><a class="btn btn-primary" href="/free-audit">Start free audit</a><button type="button" class="btn" data-demo-exit>Exit demo</button></span></div></div>` : ''}
 <main id="main" tabindex="-1" class="wrap wrap-app app-main ${cls}"><div class="screen-loading" aria-hidden="true"></div></main>`;
   }
   return html`${siteHeader({ path: ctx.path, large })}
@@ -59,6 +60,8 @@ async function render(route, ctx, previous) {
 
   app.innerHTML = String(frame(route, ctx));
   const main = app.querySelector('main');
+  const exitDemo = app.querySelector('[data-demo-exit]');
+  if (exitDemo) exitDemo.addEventListener('click', async () => { ctx.navigate(await signOut()); });
   const headerCleanup = route.layout === 'app' ? mountAppHeader(app) : route.layout === 'bare' ? () => {} : mountSiteHeader(app);
 
   let screenCleanup = null;

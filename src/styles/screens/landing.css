@@ -221,3 +221,7 @@
   .faq summary { padding: 1rem 1.25rem; font-size: 1.0625rem; }
   .faq details p { padding: 0 1.25rem 1.125rem; }
 }
+
+/* "See it with sample data" card in How it works */
+.l-demo-card { margin-top: 1.5rem; max-width: 26rem; align-items: flex-start; }
+.l-demo-card .btn { margin-top: .25rem; }

@@ -6,7 +6,7 @@ const NAV = [
   { label: 'Home', href: '/' },
   { label: 'How it works', href: '/#how' },
   { label: 'Agents', href: '/#agents' },
-  { label: 'Sample report', href: SAMPLE_REPORT_PATH },
+  { label: 'Live demo', href: `/demo?to=${SAMPLE_REPORT_PATH}` },
   { label: 'Pricing', href: '/pricing' },
   { label: 'FAQ', href: '/#faq' },
   { label: 'Team', href: '/team' },

@@ -1,7 +1,7 @@
 // Guest share view, invite acceptance, error pages and placeholder legal pages.
 
 import { html } from '../lib/html.js';
-import { openSharedReport, getUsers, getOrg, getInvite, acceptInvite, getSession } from '../data/repo.js';
+import { openSharedReport, getUsers, getOrg, getInvite, acceptInvite, getSession, enterDemo } from '../data/repo.js';
 import { reportBody } from './report.js';
 import { logo } from '../components/logo.js';
 import { fmtDate } from '../components/ui.js';
@@ -64,6 +64,22 @@ export const invite = {
         try { await acceptInvite(ctx.params.token); ctx.navigate('/portfolio'); } catch (err) { root.querySelector('[data-inv-err]').textContent = err.message; btn.disabled = false; }
       });
     }
+    return null;
+  },
+};
+
+// /demo: opens the public demo workspace (sample data, in this browser only)
+// and goes to the portfolio, or to ?to= when it is an internal path.
+export const demo = {
+  title: 'Opening the demo · AVA',
+  className: 'planned-screen',
+  render() {
+    return html`<section class="planned" aria-live="polite"><span class="lbl">Live demo</span><h1 class="display-m">Opening the demo workspace…</h1></section>`;
+  },
+  mount(root, ctx) {
+    const to = ctx.query.get('to') || '';
+    const next = /^\/(?!\/)[\w\-/?=&.]*$/.test(to) ? to : '/portfolio';
+    enterDemo().then(() => ctx.navigate(next, { replace: true }));
     return null;
   },
 };

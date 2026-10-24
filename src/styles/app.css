@@ -192,3 +192,9 @@ a.tile:hover { border-color: rgba(170, 160, 255, .5); transform: translateY(-2px
   .card-pad { padding: 1.375rem; }
   .empty-state { padding: 1.75rem 1.375rem; }
 }
+
+/* Public demo workspace strip, under the app header. */
+.demo-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; margin-top: .75rem; padding: .625rem 1rem; border-radius: 14px; border: 1px solid rgba(143, 184, 255, .4); background: rgba(143, 184, 255, .08); font-size: .875rem; }
+.demo-bar b { color: var(--sev-low); font-weight: 700; }
+.demo-bar-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.demo-bar .btn { min-height: 38px; padding: 0 1rem; font-size: .8125rem; }
