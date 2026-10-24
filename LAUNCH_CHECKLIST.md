@@ -23,12 +23,12 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 - [x] 2.1 Add environment variables: 5 Config + 3 Secret, Production and Preview (2026-10-24)
 - [x] 2.2 Production branch: claude/design-implementation-0z8bwt is the repository's only branch, so Vercel production already builds from it (2026-10-24)
-- [~] 2.3 Deploy; confirm https://ava-analyst.vercel.app/api/health returns ok
+- [x] 2.3 Deploy; https://ava-analyst.vercel.app/api/health returns ok: database, Anthropic key, auth verification and cron secret all true (2026-10-24)
 - [ ] 2.4 Custom domain and HTTPS
 
 ## Stage 3. Background jobs and email
 
-- [ ] 3.1 Run supabase/cron.sql (audit advancement every minute, email every 5 minutes)
+- [~] 3.1 Run supabase/cron.sql (audit advancement every minute, email every 5 minutes)
 - [ ] 3.2 Resend: verify sending domain, set EMAIL_FROM and RESEND_API_KEY
 - [ ] 3.3 Confirm a test email arrives (invite yourself)
 
