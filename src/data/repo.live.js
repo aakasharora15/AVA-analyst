@@ -17,8 +17,21 @@ export const MODE = 'live';
 
 const env = import.meta.env;
 const sb = createClient(env.VITE_SUPABASE_URL || 'http://localhost:54321', env.VITE_SUPABASE_ANON_KEY || 'missing-anon-key', {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' },
 });
+
+// A failed Google or SSO return carries its reason in the URL. Capture it
+// before the route guard redirects and the address bar loses it.
+let returnError = (() => {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  new URLSearchParams(window.location.hash.slice(1)).forEach((v, k) => params.set(k, v));
+  const msg = params.get('error_description') || params.get('error');
+  return msg ? msg.replace(/\+/g, ' ') : null;
+})();
+
+/** The sign-in error returned by the provider, once. */
+export function takeAuthError() { const e = returnError; returnError = null; return e; }
 const API = (env.VITE_API_URL || '').replace(/\/$/, '');
 const ORG_KEY = 'live-org';
 

@@ -1,6 +1,6 @@
 import { html } from '../lib/html.js';
 import { PASSWORD_RULE, passwordProblem } from '../data/shared.js';
-import { MODE, DEMO_EMAIL, DEMO_PASSWORD, signIn, signInWithProvider, signUp, getSession, requestPasswordReset, updatePassword, signInWithSso, resendVerification } from '../data/repo.js';
+import { MODE, DEMO_EMAIL, DEMO_PASSWORD, signIn, signInWithProvider, signUp, getSession, requestPasswordReset, updatePassword, signInWithSso, resendVerification, takeAuthError } from '../data/repo.js';
 import { wordmarkSvg } from '../components/logo.js';
 
 // Auth states (spec 4.12), opened with ?state=<name>. In the demo (mock data)
@@ -87,6 +87,15 @@ export default {
       const session = await getSession();
       ctx.navigate(session.onboarded ? (ctx.query.get('next') || '/portfolio') : '/onboarding');
     };
+    // Back from Google with an error: say why. Already signed in (a provider
+    // return, or a second tab): carry on instead of asking again.
+    const returned = takeAuthError();
+    const errEl = root.querySelector('[data-err]');
+    if (returned && errEl) errEl.textContent = `Google sign-in did not complete: ${returned}`;
+    const state = ctx.query.get('state');
+    if (!returned && !demo && (!state || state === 'verify')) {
+      getSession().then((s) => { if (s.signedIn && !ac.signal.aborted) after(); }).catch(() => {});
+    }
     const busy = (f, on) => { const b = f.querySelector('[type="submit"]'); if (b) b.disabled = on; };
     root.addEventListener('submit', async (e) => {
       e.preventDefault();

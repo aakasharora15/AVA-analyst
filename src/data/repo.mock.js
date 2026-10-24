@@ -91,6 +91,7 @@ export async function signOut() { db.session.signedIn = false; persist(); }
 export async function signUp() { return { verify: true }; }
 // Demo: Google sign-in opens the sample account.
 export async function signInWithProvider() { await signIn('alex@yourfund.example'); return { signedIn: true }; }
+export function takeAuthError() { return null; }
 export async function requestPasswordReset() {}
 export async function resendVerification() {}
 export async function updatePassword() {}

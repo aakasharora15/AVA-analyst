@@ -83,6 +83,7 @@ export const checkWorkEmail = (...a) => primary.checkWorkEmail(...a);
 export const getSession = (...a) => impl().getSession(...a);
 export const signUp = (...a) => impl().signUp(...a);
 export const signInWithProvider = (...a) => impl().signInWithProvider(...a);
+export const takeAuthError = () => primary.takeAuthError();
 export const requestPasswordReset = (...a) => impl().requestPasswordReset(...a);
 export const resendVerification = (...a) => impl().resendVerification(...a);
 export const updatePassword = (...a) => impl().updatePassword(...a);
