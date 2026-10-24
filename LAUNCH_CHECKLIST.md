@@ -16,7 +16,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] 1.7 Auth settings: email confirmation on, password 12+ with upper/lower/digit/symbol, secure password change on, Site URL https://ava-analyst.vercel.app, redirects ava-analyst.vercel.app/** and localhost:5173/** (2026-10-23)
 - [ ] 1.8 Auth emails: custom SMTP (Resend). Blocked on owning a domain: Supabase's built-in email only reaches project team members, so public sign-up needs this
 - [x] 1.9 Enable pg_cron and pg_net (2026-10-23)
-- [ ] 1.13 Apply migration 5 (supabase/migrations/20261024000002_plans_deep_audit.sql): Deep audit flag, plan ids, plans change only through billing
+- [x] 1.13 Apply migration 5 (supabase/migrations/20261024000002_plans_deep_audit.sql): Deep audit flag, plan ids, plans change only through billing (2026-10-24)
 - [x] 1.12 Apply migration 4 (supabase/migrations/20261024000001_hide_model.sql): users can no longer read which AI model ran an audit (2026-10-24)
 - [~] 1.10 Google sign-in: Google Cloud project "ava-verdict" (dedicated AVA Verdict account), OAuth client "AVA Verdict staging" (External, Testing), Supabase Google provider saved. Remaining: rotate the secret exposed in a screenshot, test once the site URL is set
 - [ ] 1.11 Microsoft sign-in (recommended over Apple for funds and corporates; awaiting decision)
@@ -38,7 +38,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 - [x] 4.1 Set VITE_AVA_DATA=live and redeploy (2026-10-24)
 - [x] 4.1a Public demo workspace: demo@avaverdict.com / VerdictDemo2026 via the real sign-in screen ("Explore the live demo" pre-fills it); sample data in the visitor's browser only, no database, Claude API or email; exit returns to the landing page (2026-10-24)
-- [ ] 4.2 Sign up, verify email, onboard
+- [~] 4.2 Sign up, verify email, onboard
 - [ ] 4.3 Add a company, upload a PDF, run a full audit on the real Claude API
 - [ ] 4.4 Record cost and run time of one audit
 - [ ] 4.5 Dismiss a finding, comment, assign an owner
