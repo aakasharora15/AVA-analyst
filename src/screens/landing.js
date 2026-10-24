@@ -123,7 +123,7 @@ export default {
   <h1 id="hero-title" class="l-hero-title display-xl">Find the risk before the capital goes in</h1>
   <p class="l-hero-sub">Six AI agents attack a venture from six angles. You get one score from 0 to 100 and one directive: proceed, hold, pivot or kill.</p>
   <div class="l-hero-cta">
-    <a class="btn btn-tint btn-lg" href="/demo">Explore the live demo</a>
+    <a class="btn btn-tint btn-lg" href="/sign-in?demo=1">Explore the live demo</a>
     <a class="btn btn-primary btn-lg" href="/free-audit">Get started</a>
   </div>
 </section>
@@ -146,7 +146,7 @@ export default {
       <span class="lbl">See it with sample data</span>
       <p class="small muted">Open the dashboard a fund sees after signing in: portfolio, reports, history and alerts.</p>
       <span class="small l-demo-cred">Email <code>${DEMO_EMAIL}</code><br>Password <code>${DEMO_PASSWORD}</code></span>
-      <a class="btn btn-tint" href="/demo">Explore the live demo</a>
+      <a class="btn btn-tint" href="/sign-in?demo=1">Explore the live demo</a>
     </div>
   </div>
   <div class="l-preview v-pivot">
@@ -175,7 +175,7 @@ export default {
       <div class="l-agent-card-head"><span class="lbl" data-cur-meta>0${active + 1} · ${cur.role}</span><span class="tag ${SEV_CLASS[cur.sev]}" data-cur-sev>${cur.sev}</span></div>
       <div class="l-agent-name" data-cur-name>${cur.name}</div>
       <p class="l-agent-finding" data-cur-finding>${cur.finding}</p>
-      <a class="l-agent-link" href="/demo?to=${SAMPLE_REPORT_PATH}">Open in the sample report <span aria-hidden="true">→</span></a>
+      <a class="l-agent-link" href="/sign-in?demo=1&next=${encodeURIComponent(SAMPLE_REPORT_PATH)}">Open in the sample report <span aria-hidden="true">→</span></a>
     </div>
     <div class="l-agent-ctrl">
       <button class="btn" type="button" data-agent-step="-1" aria-label="Previous agent">← Previous</button>

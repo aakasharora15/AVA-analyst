@@ -359,3 +359,4 @@ button.dr-row[aria-pressed='true'] { border-color: rgba(170, 160, 255, .7); }
 
 /* Demo login note on the sign-in screen */
 .si-demo code, .l-demo-cred code { font-family: var(--font-mono, ui-monospace, monospace); font-size: .8125rem; color: var(--text); user-select: all; }
+.si-demo-fill { padding-left: 0; text-align: left; align-self: flex-start; text-decoration: underline; text-underline-offset: 3px; }

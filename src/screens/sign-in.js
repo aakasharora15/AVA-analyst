@@ -34,25 +34,31 @@ function panel(ctx) {
     </div>`;
   }
   const isIn = mode === 'in';
+  // ?demo=1 (from "Explore the live demo"): the demo login is filled in, so the
+  // visitor goes through the real sign-in screen into the demo workspace.
+  const demoLogin = isIn && ctx.query.get('demo') === '1';
+  const email = demoLogin ? DEMO_EMAIL : (demo ? 'alex@yourfund.example' : '');
+  const password = demoLogin ? DEMO_PASSWORD : (isIn && demo ? 'prototype-only' : '');
   return html`<div class="si-panel stack-lg">
     <div class="seg" role="group" aria-label="Sign in or create account"><a class="seg-btn si-tab" href="/sign-in" aria-current="${isIn ? 'page' : 'false'}">Sign in</a><a class="seg-btn si-tab" href="/sign-in?mode=up" aria-current="${isIn ? 'false' : 'page'}">Create account</a></div>
     <div class="stack-sm"><h2 class="si-title">${isIn ? 'Welcome back.' : 'Create your account.'}</h2><p class="muted">${isIn ? 'Sign in to open your portfolio.' : 'Your organisation gets one shared risk record.'}</p></div>
+    ${demoLogin ? html`<div class="banner banner-info si-demo-on" role="note"><span><b>Demo login filled in.</b> Click Sign in to open the demo workspace with sample data.</span></div>` : ''}
     <button type="button" class="btn" data-oauth="google"><svg class="si-g" viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Continue with Google</button>
     <button type="button" class="btn" data-sso>Continue with single sign-on</button>
     <div class="si-or"><span></span><span class="lbl">or with email</span><span></span></div>
     <form class="stack-md" data-signin novalidate>
       ${isIn ? '' : html`<div class="fld"><label for="s-name">Full name</label><input id="s-name" class="inp" autocomplete="name"></div><div class="fld"><label for="s-org">Organisation</label><input id="s-org" class="inp" autocomplete="organization" placeholder="Fund, team or accelerator"></div>`}
-      <div class="fld"><label for="s-email">Work email</label><input id="s-email" type="email" class="inp" autocomplete="email" value="${demo ? 'alex@yourfund.example' : ''}" aria-describedby="s-err"></div>
-      <div class="fld"><label for="s-pass">Password</label><input id="s-pass" type="password" class="inp" autocomplete="${isIn ? 'current-password' : 'new-password'}" value="${isIn && demo ? 'prototype-only' : ''}"${isIn ? '' : html` minlength="12" aria-describedby="s-pass-hint"`}>${isIn ? '' : html`<span class="hint" id="s-pass-hint">${PASSWORD_RULE}</span>`}</div>
+      <div class="fld"><label for="s-email">Work email</label><input id="s-email" type="email" class="inp" autocomplete="email" value="${email}" aria-describedby="s-err"></div>
+      <div class="fld"><label for="s-pass">Password</label><input id="s-pass" type="password" class="inp" autocomplete="${isIn ? 'current-password' : 'new-password'}" value="${password}"${isIn ? '' : html` minlength="12" aria-describedby="s-pass-hint"`}>${isIn ? '' : html`<span class="hint" id="s-pass-hint">${PASSWORD_RULE}</span>`}</div>
       <span class="err" id="s-err" role="alert" data-err></span>
       <button type="submit" class="btn btn-primary btn-lg" data-submit>${isIn ? 'Sign in' : 'Create account'}</button>
       ${isIn ? html`<a class="link small" href="/sign-in?state=forgot">Forgot password?</a>` : html`<p class="hint">[TERMS] and [PRIVACY] apply. We will send a link to verify your email.</p>`}
     </form>
-    ${isIn ? html`<div class="card card-pad stack-sm si-demo" role="note">
+    ${isIn && !demoLogin ? html`<div class="card card-pad stack-sm si-demo" role="note">
       <b>Exploring AVA?</b>
       <span class="small muted">Sign in to the demo workspace with sample data. Nothing you do there is saved to a real account.</span>
       <span class="small si-demo-cred">Email <code>${DEMO_EMAIL}</code> · Password <code>${DEMO_PASSWORD}</code></span>
-      <a class="link small" href="/demo">Open the demo in one click</a>
+      <button type="button" class="link-btn si-demo-fill" data-demo-fill>Fill in the demo login</button>
     </div>` : ''}
     <p class="small muted">Invited by a colleague? Use the link in your invitation email.</p>
   </div>`;
@@ -143,6 +149,11 @@ export default {
         const email = root.querySelector('#s-email');
         const r = await signInWithSso(email ? email.value.trim() : '');
         if (r.state !== 'redirecting') ctx.navigate(`/sign-in?state=${r.state}`);
+      }
+      if (e.target.closest('[data-demo-fill]')) {
+        root.querySelector('#s-email').value = DEMO_EMAIL;
+        root.querySelector('#s-pass').value = DEMO_PASSWORD;
+        root.querySelector('[data-signin] [type="submit"]').focus();
       }
       const resend = e.target.closest('[data-resend]');
       if (resend) {
