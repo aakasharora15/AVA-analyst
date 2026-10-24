@@ -28,13 +28,13 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Stage 3. Background jobs and email
 
-- [~] 3.1 Run supabase/cron.sql (audit advancement every minute, email every 5 minutes)
+- [x] 3.1 Run supabase/cron.sql: ava-advance every minute and ava-email every 5 minutes, both returning 200 (2026-10-24)
 - [ ] 3.2 Resend: verify sending domain, set EMAIL_FROM and RESEND_API_KEY
 - [ ] 3.3 Confirm a test email arrives (invite yourself)
 
 ## Stage 4. Staging walkthrough (live mode, real Supabase)
 
-- [ ] 4.1 Set VITE_AVA_DATA=live on a staging deployment
+- [~] 4.1 Set VITE_AVA_DATA=live and redeploy
 - [ ] 4.2 Sign up, verify email, onboard
 - [ ] 4.3 Add a company, upload a PDF, run a full audit on the real Claude API
 - [ ] 4.4 Record cost and run time of one audit
@@ -70,5 +70,6 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Log
 
+- 2026-10-24: Cron jobs fixed: Vault held a placeholder app URL and cron secret. cron.sql now refuses placeholders and updates existing values; the API strips stray whitespace from the secret; /api/health shows a cron secret fingerprint to compare with Vault.
 - 2026-10-23: Staging project created. Not linked to GitHub; migrations applied by hand. Data API on, auto-expose off, automatic RLS on.
 - 2026-10-23: Removed the pgcrypto dependency from migration 1 so it applies cleanly on Supabase. Checklist created.
