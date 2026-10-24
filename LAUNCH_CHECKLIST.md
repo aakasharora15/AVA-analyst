@@ -21,9 +21,9 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Stage 2. Vercel (hosting and the API)
 
-- [~] 2.1 Add environment variables from .env.example
-- [ ] 2.2 Production branch: merge this branch or point production at it
-- [ ] 2.3 Deploy; confirm /api/health returns ok
+- [x] 2.1 Add environment variables: 5 Config + 3 Secret, Production and Preview (2026-10-24)
+- [x] 2.2 Production branch: claude/design-implementation-0z8bwt is the repository's only branch, so Vercel production already builds from it (2026-10-24)
+- [~] 2.3 Deploy; confirm https://ava-analyst.vercel.app/api/health returns ok
 - [ ] 2.4 Custom domain and HTTPS
 
 ## Stage 3. Background jobs and email
@@ -44,7 +44,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [ ] 4.8 CSV import, alerts, outcomes, export
 - [ ] 4.9 Free audit with a work email; second attempt same domain is blocked
 - [ ] 4.10 Real phones and browsers (iOS Safari, Android Chrome, desktop); PDF print
-- [ ] 4.11 GitHub Actions CI green
+- [x] 4.11 GitHub Actions CI green (runs 1-13 on the branch, 2026-10-23)
 
 ## Stage 5. Product sign-off
 
