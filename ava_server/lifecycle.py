@@ -14,7 +14,7 @@ from datetime import date, datetime, timezone
 
 from . import db, emailer
 from .agents import AgentError, AgentRunner, build_context
-from .config import AGENTS, CALIBRATION, CALIBRATIONS, SECTIONS, settings
+from .config import AGENTS, CALIBRATION, CALIBRATIONS, SECTIONS, model_for, settings
 from .engine import score_audit, score_excluding_dismissed
 from .quality import input_problem
 from .rules import checkpoints, evaluate_alerts
@@ -49,7 +49,7 @@ class InsufficientInput(ValueError):
     """The venture inputs cannot support an audit (see quality.py)."""
 
 
-def create_audit(user_id: str | None, company_id: str, trigger: str = "manual", notify: bool = False) -> str:
+def create_audit(user_id: str | None, company_id: str, trigger: str = "manual", notify: bool = False, depth: str = "standard") -> str:
     """Queue an audit. The insert runs as the user so RLS enforces who may run audits.
     Refuses inputs AVA cannot assess, before any model call is made."""
     with db.system() as c:
@@ -77,9 +77,9 @@ def create_audit(user_id: str | None, company_id: str, trigger: str = "manual", 
         sources = c.execute("select * from sources where company_id = %s and status <> 'superseded'", (company_id,)).fetchall()
         snap, digest = snapshot(company, sources)
         c.execute(
-            "update audits set input_snapshot = %s, snapshot_hash = %s, source_ids = %s, model_version = %s, prompt_version = %s, "
+            "update audits set depth = %s, input_snapshot = %s, snapshot_hash = %s, source_ids = %s, model_version = %s, prompt_version = %s, "
             "calibration_version = %s where id = %s",
-            (db.jsonb(snap), digest, [x["id"] for x in sources], s.model, s.prompt_version, CALIBRATION["version"], audit_id))
+            (depth, db.jsonb(snap), digest, [x["id"] for x in sources], model_for(depth, s), s.prompt_version, CALIBRATION["version"], audit_id))
         for a in AGENTS:
             c.execute("insert into agent_runs (audit_id, org_id, agent) values (%s, %s, %s)", (audit_id, company["org_id"], a["n"]))
     return audit_id
@@ -164,10 +164,10 @@ def advance(audit_id: str, runner: AgentRunner | None = None, live_research: boo
         if live_research and agent_n in RESEARCH_AGENTS and audit["trigger"] != "shadow":
             with db.system() as c:
                 company = c.execute("select * from companies where id = %s", (audit["company_id"],)).fetchone()
-            research = runner.research(agent_n, company)
+            research = runner.research(agent_n, company, model=audit["model_version"])
             _register_public_sources(audit, research)
         context, company, sources = _context(audit, agent_n, research)
-        result = runner.run(agent_n, context)
+        result = runner.run(agent_n, context, model=audit["model_version"])
     except AgentError as err:
         _record_failure(run, err)
     else:

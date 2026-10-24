@@ -413,7 +413,7 @@ ${banners(a)}
 <section aria-label="Verdict" class="r-verdict">
   <div class="r-verdict-copy">
     <div class="stack-sm">
-      <span class="lbl">Audit ${a.auditNumber} of ${a.auditTotal} · ${fmtDate(a.date)}${sample ? ' · Sample data' : ''}</span>
+      <span class="lbl">Audit ${a.auditNumber} of ${a.auditTotal} · ${fmtDate(a.date)}${a.depth === 'deep' ? ' · Deep audit' : ''}${sample ? ' · Sample data' : ''}</span>
       <h1 class="r-title">${a.company.title}</h1>
       <p class="muted r-desc">${a.company.description}</p>
       <div class="chips"><span class="tag tag-neutral">${a.company.industry}</span><span class="tag tag-neutral">${[a.company.city, a.company.country].filter(Boolean).join(', ')}</span><span class="tag tag-neutral">${TYPE_LABEL[a.company.type]}</span>${a.company.budget ? html`<span class="tag tag-neutral">${a.company.budget}</span>` : ''}</div>

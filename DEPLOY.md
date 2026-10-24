@@ -52,7 +52,7 @@ Mail goes into `email_outbox` first, then out through Resend when `RESEND_API_KE
 
 ## Model behaviour
 
-- **Pinned model.** `AVA_MODEL=claude-opus-5-5` is an exact model version, not an alias. It is recorded on every audit and every agent run.
+- **Models.** Every plan runs the standard engine, `AVA_MODEL` (default `claude-sonnet-5-5`), so the same venture gets the same verdict on any plan. Pro Max and Enterprise can also run a Deep audit on `AVA_DEEP_MODEL` (default `claude-opus-5-5`). Both are exact model versions, recorded on every audit and agent run, and never shown to users.
 - **No temperature.** This model rejects sampling parameters, so temperature cannot be set to 0. Repeatability comes from the pinned model and prompt versions, schema-constrained JSON output, fixed effort (`AVA_EFFORT`), frozen input snapshots, and code-side scoring. The monthly shadow sample measures what variance remains.
 - **Refusal fallback.** With `AVA_REFUSAL_FALLBACK=default`, a refused agent request is retried server-side on Anthropic's fallback model. The model that actually answered is stored per agent run (`served_model`, `fallback_used`). Set it to `off` to fail the agent instead. One retry follows, then the audit goes Partial.
 - **Drift and hold.** A monthly shadow sample re-runs past audits on their frozen inputs. A median score change above 6 starts hold mode automatically. New verdicts are then labelled Under review and directive alerts pause. Lifting a hold needs a written reason and a second reviewer:

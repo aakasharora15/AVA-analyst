@@ -20,7 +20,7 @@ import logging
 import anthropic
 import jsonschema
 
-from .config import AGENTS, CATEGORIES, DIRECTIVES, SECTIONS, Settings, settings
+from .config import AGENTS, CATEGORIES, DIRECTIVES, FALLBACK_MODEL_PREFIXES, SECTIONS, Settings, settings
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 MAX_PAUSE_CONTINUATIONS = 3
@@ -180,17 +180,17 @@ class AgentRunner:
         self.client = client or anthropic.Anthropic(max_retries=2, timeout=240.0)
 
     def _create(self, **kwargs):
-        if self.cfg.refusal_fallback == "default":
+        if self.cfg.refusal_fallback == "default" and str(kwargs.get("model", "")).startswith(FALLBACK_MODEL_PREFIXES):
             return self.client.beta.messages.create(
                 betas=["server-side-fallback-2026-07-01"], fallbacks="default", **kwargs)
         return self.client.messages.create(**kwargs)
 
-    def run(self, agent_n: int, context: str) -> AgentResult:
+    def run(self, agent_n: int, context: str, model: str | None = None) -> AgentResult:
         started = time.monotonic()
         schema = agent_schema(agent_n)
         try:
             resp = self._create(
-                model=self.cfg.model,
+                model=model or self.cfg.model,
                 max_tokens=16000,
                 system=[{"type": "text", "text": system_prompt(self.cfg.prompt_version, agent_n),
                          "cache_control": {"type": "ephemeral"}}],
@@ -228,7 +228,7 @@ class AgentRunner:
         return AgentResult(output=output, served_model=resp.model, fallback_used=fallback_used,
                            usage=usage, duration_s=round(time.monotonic() - started, 1))
 
-    def research(self, agent_n: int, company: dict) -> list[dict]:
+    def research(self, agent_n: int, company: dict, model: str | None = None) -> list[dict]:
         """Live public research before an agent runs. Every result becomes a
         registered public Source before any finding may cite it (spec 4.2)."""
         agent = AGENTS[agent_n - 1]
@@ -243,7 +243,7 @@ class AgentRunner:
         for _ in range(MAX_PAUSE_CONTINUATIONS + 1):
             try:
                 resp = self.client.messages.create(
-                    model=self.cfg.model, max_tokens=8000,
+                    model=model or self.cfg.model, max_tokens=8000,
                     tools=[{"type": "web_search_20260209", "name": "web_search", "max_uses": 4}],
                     messages=messages, output_config={"effort": "low"},
                 )

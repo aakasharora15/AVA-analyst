@@ -26,9 +26,16 @@ def rows(cur):
 
 
 @pytest.mark.parametrize("role", ALL)
-def test_billing_owner_only(world, role):
-    ok = attempt(world, role, lambda c: rows(c.execute("update organisations set plan = 'Enterprise' where id = %s", (world["org"],))))
+def test_billing_contact_owner_only(world, role):
+    ok = attempt(world, role, lambda c: rows(c.execute("update organisations set billing_contact = 'ap@fund.example' where id = %s", (world["org"],))))
     assert ok == (role == "Owner")
+
+
+@pytest.mark.parametrize("role", ALL)
+def test_plan_changes_only_through_billing(world, role):
+    """The plan is a paid entitlement: no user, not even the Owner, can upgrade it."""
+    ok = attempt(world, role, lambda c: rows(c.execute("update organisations set plan = 'pro-max' where id = %s", (world["org"],))))
+    assert ok is False
 
 
 @pytest.mark.parametrize("role", ALL)

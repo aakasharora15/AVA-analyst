@@ -44,7 +44,7 @@ def test_complete_run_writes_the_audit_record(company):
     assert st["audit"]["status"] == "complete"
     assert a["score"] is not None and a["final_directive"] == a["base_directive"]
     assert a["first_checkpoint"] and a["final_checkpoint"] and a["outcome_window_version"] == "ow-1"
-    assert a["model_version"] == "claude-opus-5-5" and a["prompt_version"] and a["calibration_version"] == "cal-2026.2"
+    assert a["model_version"] == "claude-sonnet-5-5" and a["prompt_version"] and a["calibration_version"] == "cal-2026.2"
     assert a["snapshot_hash"] and a["input_snapshot"]["company"]["title"]
     assert a["coverage"]["agentsRun"] == 6 and a["coverage"]["sectionsSkipped"] == 1
     assert a["score_excluding_dismissed"] == a["score"]
@@ -141,3 +141,21 @@ def test_drift_flag_on_identical_snapshot_with_different_score(company):
     run_to_end(second, runner({1: [{"summary": "s", "findings": [], "skipped_sections": []}]}))
     assert audit_row(first)["snapshot_hash"] == audit_row(second)["snapshot_hash"]
     assert audit_row(second)["drift_flag"] is True
+
+
+def test_agents_run_on_the_audits_recorded_model(company):
+    """Each agent call uses the model recorded on the audit, and the refusal
+    fallback is only requested where the model supports it."""
+    aid = create_audit(company["users"]["Analyst"], company["company"], depth="deep")
+    client = FakeClient()
+    cfg = Settings()
+    cfg.refusal_fallback = "default"
+    r = AgentRunner(client=client, cfg=cfg)
+    run_to_end(aid, r)
+    assert {c["model"] for c in client.calls} == {"claude-opus-5-5"}
+    assert all(c.get("fallbacks") == "default" for c in client.calls)
+    std = create_audit(company["users"]["Analyst"], company["company"])
+    client2 = FakeClient()
+    run_to_end(std, AgentRunner(client=client2, cfg=cfg))
+    assert {c["model"] for c in client2.calls} == {"claude-sonnet-5-5"}
+    assert not any("fallbacks" in c for c in client2.calls)

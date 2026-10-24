@@ -20,7 +20,7 @@ import { AGENTS, CALIBRATION, CATEGORIES, SECTIONS } from '../engine/config.js';
 import { scoreAudit } from '../engine/score.js';
 import { evaluateAlerts } from '../engine/alerts.js';
 import { checkpoints, outcomeStatus } from '../engine/outcomes.js';
-import { inputProblem, roleCan, checkEmailFormat, addDays, computeNextRun as nextRunFor, kindOf, pickAudit, enrichAudit, lockFindings, todayIso } from './shared.js';
+import { canDeepAudit, inputProblem, roleCan, checkEmailFormat, addDays, computeNextRun as nextRunFor, kindOf, pickAudit, enrichAudit, lockFindings, todayIso } from './shared.js';
 
 export const MODE = 'mock';
 
@@ -300,7 +300,7 @@ export async function runAudit(input, { failAgent = null, failRetry = false } = 
   }
   const id = nextId(`${company.id}-a`);
   const audit = {
-    id, companyId: company.id, date: todayIso(), status: 'running', trigger: input.trigger || 'manual',
+    id, companyId: company.id, date: todayIso(), status: 'running', trigger: input.trigger || 'manual', depth: input.depth === 'deep' && canDeepAudit(db.org) ? 'deep' : 'standard',
     calibrationVersion: CALIBRATION.version, findings: [], skippedSections: [], sourceIds: db.sources.filter((s) => s.companyId === company.id).map((s) => s.id),
     plan: { startedAt: Date.now(), durations: DEMO_DURATIONS, failAgent: failAgent ? Number(failAgent) : null, failRetry },
     agentRuns: [], score: null,

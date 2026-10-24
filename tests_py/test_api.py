@@ -345,3 +345,24 @@ def test_users_cannot_see_which_ai_model_ran(api):
     tok = client.post("/api/share", json={"auditId": aid, "email": "lp@partner.example"}, headers=as_(w, "Owner")).json()["token"]
     view = client.post(f"/api/shared/{tok}").json()
     assert "model_version" not in view["audit"] and "claude" not in str(view).lower()
+
+
+def test_every_plan_runs_the_standard_engine_and_pro_max_can_go_deep(api):
+    client, w = api
+    with db.system() as c:
+        c.execute("update organisations set plan = 'pro' where id = %s", (w["org"],))
+    r = client.post("/api/audits", json={"companyId": w["company"], "depth": "deep"}, headers=as_(w, "Analyst"))
+    assert r.status_code == 403 and "Pro Max" in r.json()["error"]
+    std = client.post("/api/audits", json={"companyId": w["company"]}, headers=as_(w, "Analyst")).json()["auditId"]
+    finish(client, as_(w, "Analyst"), std)
+    with db.system() as c:
+        c.execute("update organisations set plan = 'Pro Max' where id = %s", (w["org"],))
+    deep = client.post("/api/audits", json={"companyId": w["company"], "depth": "deep"}, headers=as_(w, "Analyst")).json()["auditId"]
+    finish(client, as_(w, "Analyst"), deep)
+    with db.system() as c:
+        rows = {r["id"]: r for r in c.execute("select id, depth, model_version from audits where id = any(%s)", ([std, deep],)).fetchall()}
+    assert rows[std]["depth"] == "standard" and rows[std]["model_version"] == "claude-sonnet-5-5"
+    assert rows[deep]["depth"] == "deep" and rows[deep]["model_version"] == "claude-opus-5-5"
+    # Users see the depth, never the model.
+    with db.as_user(w["users"]["Viewer"]) as c:
+        assert c.execute("select depth from audits where id = %s", (deep,)).fetchone()["depth"] == "deep"

@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 from . import db, drift, emailer, lifecycle, scheduling
 from .quality import input_problem
 from .auth import cron_guard, current_user
-from .config import settings
+from .config import DEEP_AUDIT_PLANS, plan_id, settings
 
 app = FastAPI(title="AVA API", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -178,6 +178,7 @@ class AuditIn(BaseModel):
     companyId: str | None = None
     company: CompanyIn | None = None
     notify: bool = False
+    depth: str = Field(default="standard", pattern="^(standard|deep)$")
 
 
 @app.post("/api/audits")
@@ -195,7 +196,12 @@ def start_audit(body: AuditIn, user: str = Depends(current_user)):
         busy = c.execute("select id from audits where company_id = %s and status in ('queued', 'running') and trigger <> 'shadow'", (company_id,)).fetchone()
     if busy:
         return {"auditId": busy["id"], "companyId": company_id, "alreadyRunning": True}
-    audit_id = lifecycle.create_audit(user, company_id, notify=body.notify)
+    if body.depth == "deep":
+        with db.system() as c:
+            plan = c.execute("select o.plan from companies co join organisations o on o.id = co.org_id where co.id = %s", (company_id,)).fetchone()
+        if not plan or plan_id(plan["plan"]) not in DEEP_AUDIT_PLANS:
+            raise HTTPException(403, "Deep audit is part of the Pro Max plan")
+    audit_id = lifecycle.create_audit(user, company_id, notify=body.notify, depth=body.depth)
     return {"auditId": audit_id, "companyId": company_id}
 
 

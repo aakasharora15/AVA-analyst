@@ -16,7 +16,7 @@ import statistics
 from datetime import date
 
 from . import db, emailer
-from .config import AGENTS, CALIBRATION, DRIFT, settings
+from .config import AGENTS, CALIBRATION, DRIFT, model_for, settings
 
 
 def create_shadow(original_id: str, purpose: str) -> str:
@@ -24,9 +24,9 @@ def create_shadow(original_id: str, purpose: str) -> str:
     with db.system() as c:
         o = c.execute("select * from audits where id = %s", (original_id,)).fetchone()
         sid = c.execute(
-            "insert into audits (org_id, company_id, trigger, status, input_snapshot, snapshot_hash, source_ids, model_version, prompt_version, "
-            "calibration_version, run_state) values (%s, %s, 'shadow', 'queued', %s, %s, %s, %s, %s, %s, %s) returning id",
-            (o["org_id"], o["company_id"], db.jsonb(o["input_snapshot"]), o["snapshot_hash"], o["source_ids"], s.model, s.prompt_version,
+            "insert into audits (org_id, company_id, trigger, depth, status, input_snapshot, snapshot_hash, source_ids, model_version, prompt_version, "
+            "calibration_version, run_state) values (%s, %s, 'shadow', %s, 'queued', %s, %s, %s, %s, %s, %s, %s) returning id",
+            (o["org_id"], o["company_id"], o["depth"], db.jsonb(o["input_snapshot"]), o["snapshot_hash"], o["source_ids"], model_for(o["depth"], s), s.prompt_version,
              CALIBRATION["version"], db.jsonb({"shadowOf": original_id, "purpose": purpose}))).fetchone()["id"]
         for a in AGENTS:
             c.execute("insert into agent_runs (audit_id, org_id, agent) values (%s, %s, %s)", (sid, o["org_id"], a["n"]))

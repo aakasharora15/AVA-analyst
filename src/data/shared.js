@@ -58,6 +58,10 @@ export function inputProblem({ title = '', description = '' } = {}) {
   return null;
 }
 
+// Plans (ids match src/content/business.js and the server's DEEP_AUDIT_PLANS).
+export const planId = (plan) => String(plan || 'pro').trim().toLowerCase().replace(/\s+/g, '-');
+export const canDeepAudit = (org) => ['pro-max', 'enterprise'].includes(planId(org && org.plan));
+
 export const todayIso = () => new Date().toISOString().slice(0, 10);
 
 export function addDays(iso, days) {

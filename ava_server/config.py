@@ -38,7 +38,11 @@ class Settings:
         env = os.environ.get
         # Exact model ID. Model IDs without a date suffix are exact versions,
         # not aliases, so this satisfies "pin exact model versions".
-        self.model = env("AVA_MODEL", "claude-opus-5-5")
+        # Standard engine: every plan's audits run on this model, so the same
+        # venture gets the same verdict whatever the customer pays.
+        self.model = env("AVA_MODEL", "claude-sonnet-5-5")
+        # Deep audit (Pro Max and Enterprise): extended analysis on a larger model.
+        self.deep_model = env("AVA_DEEP_MODEL", "claude-opus-5-5")
         self.effort = env("AVA_EFFORT", "high")
         self.prompt_version = env("AVA_PROMPT_VERSION", "prompts-2026.10")
         # Server-side refusal fallback. The served model is recorded on every
@@ -57,6 +61,24 @@ class Settings:
                 "gmail.com,googlemail.com,yahoo.com,yahoo.co.uk,hotmail.com,hotmail.co.uk,outlook.com,live.com,icloud.com,me.com,aol.com,proton.me,protonmail.com,gmx.com,mail.com",
             ).split(",") if d.strip()
         )
+
+
+# Plans that may run a Deep audit. Plan ids match src/content/business.js.
+DEEP_AUDIT_PLANS = {"pro-max", "enterprise"}
+
+
+def plan_id(plan: str | None) -> str:
+    """Normalise an organisation's stored plan name ("Pro Max", "pro-max") to its id."""
+    return str(plan or "pro").strip().lower().replace(" ", "-")
+
+
+def model_for(depth: str, cfg: "Settings | None" = None) -> str:
+    cfg = cfg or settings()
+    return cfg.deep_model if depth == "deep" else cfg.model
+
+
+# The server-side refusal fallback is only requested for models that support it.
+FALLBACK_MODEL_PREFIXES = ("claude-opus-5", "claude-fable-5")
 
 
 def settings() -> Settings:

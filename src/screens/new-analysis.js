@@ -1,6 +1,7 @@
 import { html } from '../lib/html.js';
 import { inputProblem } from '../data/shared.js';
-import { runAudit, getCompany, can } from '../data/repo.js';
+import { runAudit, getCompany, getOrg, can } from '../data/repo.js';
+import { canDeepAudit } from '../data/shared.js';
 import { TYPE_LABEL } from '../components/ui.js';
 import { toast } from '../components/sheet.js';
 
@@ -33,10 +34,11 @@ export default {
 
   async load(ctx) {
     const companyId = ctx.query.get('company');
-    return { company: companyId ? await getCompany(companyId) : null };
+    const [company, org] = await Promise.all([companyId ? getCompany(companyId) : null, getOrg()]);
+    return { company, deepAllowed: canDeepAudit(org) };
   },
 
-  render(ctx, { company }) {
+  render(ctx, { company, deepAllowed }) {
     const v = company
       ? { title: company.title, description: company.description, industry: company.industry, country: company.country, city: company.city, model: company.model, target: company.target, type: company.type }
       : { type: 'startup' };
@@ -51,8 +53,8 @@ export default {
       <p class="muted">Works for a startup, a strategy or a campaign. Five fields are required; type defaults to startup. Everything else sharpens the verdict.</p>
     </div>
     <div class="hero-panel na-depth">
-      <div class="na-depth-head"><span class="lbl">Audit depth</span><b data-depth-label>${d.label}</b></div>
-      <div class="na-meter" role="img" aria-label="Audit depth ${d.pct} per cent" data-depth-meter>${Array.from({ length: 20 }, (_, i) => html`<span class="${i < Math.round(d.pct / 5) ? 'on' : ''}"></span>`)}</div>
+      <div class="na-depth-head"><span class="lbl">Input detail</span><b data-depth-label>${d.label}</b></div>
+      <div class="na-meter" role="img" aria-label="Input detail ${d.pct} per cent" data-depth-meter>${Array.from({ length: 20 }, (_, i) => html`<span class="${i < Math.round(d.pct / 5) ? 'on' : ''}"></span>`)}</div>
       <span class="small" data-depth-copy>${d.filled} of ${OPTIONAL.length} optional fields completed. Attach material below to go deeper still.</span>
     </div>
     <ol class="na-notes">
@@ -112,6 +114,10 @@ export default {
       <input id="f-files" type="file" multiple class="sr-only" data-files accept=".pdf,.xlsx,.xls,.csv,.ppt,.pptx,.doc,.docx,.txt">
     </div>
 
+    <div class="card card-pad na-deep">
+      <label class="check"><input type="checkbox" name="depth" value="deep"${deepAllowed ? '' : html` disabled`} aria-describedby="h-deep"><span class="check-copy"><span>Deep audit</span><span class="hint" id="h-deep">${deepAllowed ? 'Extended analysis with more research and longer reasoning. Takes longer than a standard audit.' : html`Extended analysis with more research and longer reasoning. Part of the <a class="link" href="/pricing">Pro Max plan</a>.`}</span></span></label>
+    </div>
+
     <div class="row-actions na-submit">
       <button type="submit" class="btn btn-primary btn-lg"${allowed ? '' : html` disabled`}>Run audit</button>
       <span class="hint">Required fields are marked <span class="req">*</span>.</span>
@@ -132,7 +138,7 @@ export default {
       root.querySelector('[data-depth-label]').textContent = d.label;
       root.querySelector('[data-depth-copy]').textContent = `${d.filled} of ${OPTIONAL.length} optional fields completed. Attach material below to go deeper still.`;
       const meterEl = root.querySelector('[data-depth-meter]');
-      meterEl.setAttribute('aria-label', `Audit depth ${d.pct} per cent`);
+      meterEl.setAttribute('aria-label', `Input detail ${d.pct} per cent`);
       [...meterEl.children].forEach((s, i) => s.classList.toggle('on', i < Math.round(d.pct / 5)));
       const desc = String(v.description || '').trim();
       root.querySelector('[data-thin]').hidden = !(desc && desc.length < 120);

@@ -5,7 +5,7 @@ import { BUSINESS, PLANS, contactHref } from '../content/business.js';
 const FEATURES = {
   basic: ['Scored, cited audit reports', 'Ideas, campaigns, strategies and startups', 'Share a report with a manager or investor', 'PDF export'],
   pro: ['Everything in Basic', 'Monitoring and alerts when risk moves', 'Audit history and side-by-side comparison', 'Data room for your documents', 'Benchmarks and outcome tracking'],
-  'pro-max': ['Everything in Pro', 'Portfolio overview across every company', 'Team roles and permissions', 'Branded reports', 'Priority support'],
+  'pro-max': ['Everything in Pro', 'Deep audit: extended analysis on demand', 'Portfolio overview across every company', 'Team roles and permissions', 'Branded reports', 'Priority support'],
 };
 
 const cards = () => [
