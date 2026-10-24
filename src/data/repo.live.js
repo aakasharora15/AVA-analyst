@@ -291,6 +291,8 @@ function mapCompany(c) {
   };
 }
 
+// The model behind an audit is internal: the database does not let users read it.
+const AUDIT_FULL = 'id, org_id, company_id, date, status, trigger, score, raw_score, exposure, cap, base_directive, final_directive, overridden, override, override_cited, override_rejected, score_excluding_dismissed, coverage, skipped_sections, orchestrator, prompt_version, calibration_version, snapshot_hash, source_ids, drift_flag, under_review, hold_resolution, counted_against_usage, first_checkpoint, final_checkpoint, outcome_window_version, run_state, run_seconds, started_at, finished_at, notify_on_complete, created_at';
 const AUDIT_LIGHT = 'id, company_id, date, status, trigger, score, base_directive, final_directive, exposure, overridden, calibration_version, under_review, created_at';
 
 function mapAudit(a, findings = [], runs = []) {
@@ -299,11 +301,11 @@ function mapAudit(a, findings = [], runs = []) {
   return {
     id: a.id, companyId: a.company_id, date: a.date, status: a.status, trigger: a.trigger,
     calibrationVersion: a.calibration_version, findings, skippedSections: a.skipped_sections || [], sourceIds: a.source_ids || [],
-    agentRuns: runs.map((r) => ({ agent: r.agent, status: r.status, duration: r.duration_s == null ? null : Math.round(Number(r.duration_s)), retries: r.retry_count, findings: counts[r.agent] || 0, error: r.error_reason, schema: r.schema_result, servedModel: r.served_model, fallbackUsed: r.fallback_used })),
+    agentRuns: runs.map((r) => ({ agent: r.agent, status: r.status, duration: r.duration_s == null ? null : Math.round(Number(r.duration_s)), retries: r.retry_count, findings: counts[r.agent] || 0, error: r.error_reason, schema: r.schema_result, fallbackUsed: r.fallback_used })),
     orchestrator: a.orchestrator || null, runSeconds: a.run_seconds, exposure: a.exposure, raw: a.raw_score ?? null, cap: a.cap ?? null,
     score: a.score, baseDirective: a.base_directive, finalDirective: a.final_directive, overridden: !!a.overridden, override: a.override || null,
     overrideCited: a.override_cited || [], overrideRejected: a.override_rejected || null, coverage: a.coverage, countedAgainstUsage: a.counted_against_usage,
-    snapshotHash: a.snapshot_hash, modelVersion: a.model_version, promptVersion: a.prompt_version, underReview: !!a.under_review, driftFlag: !!a.drift_flag,
+    snapshotHash: a.snapshot_hash, promptVersion: a.prompt_version, underReview: !!a.under_review, driftFlag: !!a.drift_flag,
     outcomeWindowVersion: a.outcome_window_version, firstCheckpoint: a.first_checkpoint, finalCheckpoint: a.final_checkpoint,
     createdAt: a.created_at,
     outcome: (a.run_state || {}).outcome || null, outcomeReason: (a.run_state || {}).reason || null,
@@ -422,12 +424,12 @@ export function effectiveCadence(c, org = ctx?.org) {
 // Audits
 
 async function auditsWithFindings(filter) {
-  const as = await rows(filter(sb.from('audits').select('*')));
+  const as = await rows(filter(sb.from('audits').select(AUDIT_FULL)));
   if (!as.length) return [];
   const ids = as.map((a) => a.id);
   const [fs, runs] = await Promise.all([
     rows(sb.from('findings').select('*').in('audit_id', ids).order('position')),
-    rows(sb.from('agent_runs').select('audit_id, agent, status, duration_s, retry_count, error_reason, schema_result, served_model, fallback_used').in('audit_id', ids).order('agent')),
+    rows(sb.from('agent_runs').select('audit_id, agent, status, duration_s, retry_count, error_reason, schema_result, fallback_used').in('audit_id', ids).order('agent')),
   ]);
   const cs = fs.length ? await rows(sb.from('comments').select('finding_id, author_name, text, created_at').in('finding_id', fs.map((f) => f.id)).order('created_at')) : [];
   return as.map((a) => mapAudit(a, fs.filter((f) => f.audit_id === a.id).map((f) => mapFinding(f, cs)), runs.filter((r) => r.audit_id === a.id)));
@@ -505,7 +507,7 @@ async function drive(id) {
 const TYPICAL_AGENT_SECONDS = 45;
 
 export async function getRun(id) {
-  const a = await row(sb.from('audits').select('*').eq('id', id).maybeSingle());
+  const a = await row(sb.from('audits').select(AUDIT_FULL).eq('id', id).maybeSingle());
   if (!a) return null;
   const done = ['complete', 'partial', 'failed'].includes(a.status);
   const runs = await rows(sb.from('agent_runs').select('agent, status, retry_count, error_reason, duration_s, started_at').eq('audit_id', id).order('agent'));
@@ -645,7 +647,7 @@ export async function unreadAlertCount() {
 export async function getOutcomeRows() {
   const { org } = await need();
   const [as, os, cs] = await Promise.all([
-    rows(sb.from('audits').select('*').eq('org_id', org.id).in('status', ['complete', 'partial'])),
+    rows(sb.from('audits').select(AUDIT_FULL).eq('org_id', org.id).in('status', ['complete', 'partial'])),
     rows(sb.from('outcomes').select('*').eq('org_id', org.id)),
     rows(sb.from('companies').select('id, title, type').eq('org_id', org.id)),
   ]);

@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
+import logging
+
 import anthropic
 import jsonschema
 
@@ -23,6 +25,8 @@ from .config import AGENTS, CATEGORIES, DIRECTIVES, SECTIONS, Settings, settings
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 MAX_PAUSE_CONTINUATIONS = 3
 
+
+log = logging.getLogger("ava.agents")
 
 class AgentError(Exception):
     """An agent attempt failed. Retried once by the lifecycle."""
@@ -194,7 +198,9 @@ class AgentRunner:
                 output_config={"effort": self.cfg.effort, "format": {"type": "json_schema", "schema": schema}},
             )
         except anthropic.BadRequestError as exc:
-            raise AgentError(f"Request rejected: {exc.message}") from exc
+            # Provider detail (which can name the model) goes to the server log, not to users.
+            log.warning("Agent request rejected: %s", exc.message)
+            raise AgentError("The AI provider rejected the request") from exc
         except anthropic.RateLimitError as exc:
             raise AgentError("Rate limited by the model provider") from exc
         except anthropic.APIStatusError as exc:
@@ -204,7 +210,7 @@ class AgentRunner:
 
         if resp.stop_reason == "refusal":
             details = getattr(resp, "stop_details", None)
-            raise AgentError(f"The model declined ({getattr(details, 'category', None) or 'no category'})")
+            raise AgentError("The AI declined this request")
         if resp.stop_reason == "max_tokens":
             raise AgentError("Output was cut off at the token limit", "malformed")
         text = next((b.text for b in resp.content if getattr(b, "type", None) == "text"), None)

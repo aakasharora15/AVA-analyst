@@ -61,6 +61,7 @@ def test_health_reports_configuration_without_values(api, monkeypatch):
     assert "sk-test" not in str(r) and "cron-secret" not in str(r)
     import hashlib
     assert r["cron_secret_fingerprint"] == hashlib.sha256(b"cron-secret").hexdigest()[:8]
+    assert "model" not in r and "claude" not in str(r).lower()
     monkeypatch.delenv("ANTHROPIC_API_KEY")
     assert client.get("/api/health").json()["ok"] is False
 
@@ -327,3 +328,20 @@ def test_orchestrator_can_refuse_to_score(api, monkeypatch):
     assert a["score"] is None and a["final_directive"] is None and a["counted_against_usage"] is False
     # A refused audit does not use up the domain's free audit for the month.
     assert client.post("/api/free-audit", json={"email": f"you@{dom}", "company": co}).status_code == 200
+
+
+def test_users_cannot_see_which_ai_model_ran(api):
+    client, w = api
+    aid = client.post("/api/audits", json={"companyId": w["company"]}, headers=as_(w, "Owner")).json()["auditId"]
+    finish(client, as_(w, "Owner"), aid)
+    with db.system() as c:
+        assert c.execute("select model_version from audits where id = %s", (aid,)).fetchone()["model_version"]  # still recorded
+    for sql in ("select model_version from audits", "select served_model from agent_runs", "select output from agent_runs", "select * from audits"):
+        with pytest.raises(Exception, match="permission denied"):
+            with db.as_user(w["users"]["Owner"]) as c:
+                c.execute(sql)
+    with db.as_user(w["users"]["Owner"]) as c:
+        assert c.execute("select score, prompt_version from audits where id = %s", (aid,)).fetchone()["prompt_version"]
+    tok = client.post("/api/share", json={"auditId": aid, "email": "lp@partner.example"}, headers=as_(w, "Owner")).json()["token"]
+    view = client.post(f"/api/shared/{tok}").json()
+    assert "model_version" not in view["audit"] and "claude" not in str(view).lower()

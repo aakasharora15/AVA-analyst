@@ -113,7 +113,7 @@ def health():
     else:
         db_error = None
     required = ("database", "anthropic_key", "auth_verification", "cron_secret")
-    out = {"ok": all(checks[k] for k in required), "checks": checks, "model": s.model}
+    out = {"ok": all(checks[k] for k in required), "checks": checks}  # the model in use is internal
     if s.cron_secret:
         # First 8 hex characters of SHA-256: enough to compare with the value in
         # Supabase Vault, useless for recovering a 40-character random secret.
@@ -457,7 +457,7 @@ def shared_view(token: str, body: SharedIn | None = None):
                                     status_code=401)
         a = c.execute(
             "select id, date, status, score, base_directive, final_directive, overridden, override, coverage, skipped_sections, orchestrator, "
-            "exposure, cap, model_version, prompt_version, calibration_version, under_review, company_id, org_id from audits where id = %s",
+            "exposure, cap, prompt_version, calibration_version, under_review, company_id, org_id from audits where id = %s",
             (s["audit_id"],)).fetchone()
         co = c.execute("select title, description, industry, country, city, type from companies where id = %s", (a["company_id"],)).fetchone()
         org = c.execute("select name, branding, logo_url from organisations where id = %s", (a["org_id"],)).fetchone()
