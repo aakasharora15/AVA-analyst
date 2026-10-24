@@ -101,10 +101,38 @@ def health():
     try:
         with db.system() as c:
             checks["database"] = c.execute("select count(*) as n from calibration_versions").fetchone()["n"] > 0
-    except Exception:  # noqa: BLE001 - reported as a failed check
+    except Exception as exc:  # noqa: BLE001 - reported as a failed check
         checks["database"] = False
+        db_error = _db_error_kind(exc)
+    else:
+        db_error = None
     required = ("database", "anthropic_key", "auth_verification", "cron_secret")
-    return {"ok": all(checks[k] for k in required), "checks": checks, "model": s.model}
+    out = {"ok": all(checks[k] for k in required), "checks": checks, "model": s.model}
+    if db_error:
+        out["database_error"] = db_error
+    return out
+
+
+def _db_error_kind(exc: Exception) -> str:
+    """A category for the health check. Never echoes the connection string."""
+    msg = str(exc).lower()
+    if not settings().database_url:
+        return "DATABASE_URL is not set"
+    if "password authentication failed" in msg:
+        return "wrong password in DATABASE_URL"
+    if "tenant or user not found" in msg:
+        return "wrong user or project in DATABASE_URL (should start postgresql://postgres.<project-ref>:)"
+    if "could not translate host" in msg or "name or service not known" in msg or "nodename nor servname" in msg:
+        return "host not found: check the part after @ in DATABASE_URL"
+    if "invalid" in msg and ("dsn" in msg or "uri" in msg or "connection option" in msg or "integer" in msg):
+        return "DATABASE_URL is malformed (leftover [ ] brackets, spaces, or a special character in the password)"
+    if "timeout" in msg or "timed out" in msg:
+        return "connection timed out"
+    if "relation" in msg and "does not exist" in msg:
+        return "connected, but the AVA tables are missing (migrations not applied to this project)"
+    if "does not exist" in msg:
+        return "wrong database name or user in DATABASE_URL (should end /postgres)"
+    return type(exc).__name__
 
 
 # ---------------------------------------------------------------------------
