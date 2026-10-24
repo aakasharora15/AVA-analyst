@@ -52,6 +52,16 @@ def finish(client, headers, audit_id, path="/api/audits/{}/advance"):
     raise AssertionError("audit did not finish")
 
 
+def test_health_reports_configuration_without_values(api, monkeypatch):
+    client, _ = api
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    r = client.get("/api/health").json()
+    assert r["ok"] is True and r["checks"]["database"] is True
+    assert "sk-test" not in str(r) and "cron-secret" not in str(r)
+    monkeypatch.delenv("ANTHROPIC_API_KEY")
+    assert client.get("/api/health").json()["ok"] is False
+
+
 def test_requests_need_a_valid_token(api):
     client, w = api
     assert client.post("/api/audits", json={"companyId": w["company"]}).status_code == 401

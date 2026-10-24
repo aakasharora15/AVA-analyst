@@ -88,7 +88,23 @@ def _audit_org(audit_id: str) -> dict:
 
 @app.get("/api/health")
 def health():
-    return {"ok": True}
+    """Liveness plus configuration checks. Reports only yes/no, never values."""
+    import os
+    s = settings()
+    checks = {
+        "database": False,
+        "anthropic_key": bool(os.environ.get("ANTHROPIC_API_KEY")),
+        "auth_verification": bool(s.supabase_jwt_secret or s.supabase_url),
+        "cron_secret": bool(s.cron_secret),
+        "email_provider": bool(s.resend_api_key),
+    }
+    try:
+        with db.system() as c:
+            checks["database"] = c.execute("select count(*) as n from calibration_versions").fetchone()["n"] > 0
+    except Exception:  # noqa: BLE001 - reported as a failed check
+        checks["database"] = False
+    required = ("database", "anthropic_key", "auth_verification", "cron_secret")
+    return {"ok": all(checks[k] for k in required), "checks": checks, "model": s.model}
 
 
 # ---------------------------------------------------------------------------
