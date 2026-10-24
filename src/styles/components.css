@@ -292,3 +292,12 @@ a.card:hover, button.card:hover { border-color: rgba(170, 160, 255, .5); transfo
 /* ---------- Planned / not found ---------- */
 .planned { padding: 4.5rem 0 6rem; max-width: 40rem; display: flex; flex-direction: column; gap: 1.25rem; align-items: flex-start; }
 .planned p { color: var(--text-muted); font-size: 1.125rem; }
+
+/* Long-form legal pages */
+.legal-page { max-width: 46rem; padding: 3.5rem 0 5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+.legal-lead { color: var(--text-muted); font-size: 1.125rem; }
+.legal-sec { display: flex; flex-direction: column; gap: .625rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
+.legal-sec h2 { font-size: 1.25rem; font-weight: 700; }
+.legal-sec p, .legal-sec li { color: var(--text-muted); line-height: 1.65; }
+.legal-sec b { color: var(--text); }
+.legal-sec ul { display: flex; flex-direction: column; gap: .5rem; padding-left: 1.25rem; list-style: disc; }

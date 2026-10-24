@@ -108,6 +108,64 @@ const legal = (name, intro) => ({
   },
 });
 
-export const privacy = legal('Privacy', '[PRIVACY] How AVA collects, uses, stores and deletes personal and company data, including data retention and storage region.');
+// Draft privacy policy. Facts not yet known are bracketed placeholders for
+// legal review; processors are named by category, including the AI provider.
+const PRIVACY_UPDATED = '24 October 2026';
+const PRIVACY = [
+  ['Who we are', html`<p>AVA (Adversarial Venture Analyst) is operated by [COMPANY LEGAL NAME], [REGISTERED ADDRESS], registered with the Information Commissioner's Office under number [ICO NUMBER]. We are the controller of the personal data described here. Contact us about privacy at [PRIVACY EMAIL].</p>`],
+  ['What we collect', html`<ul>
+    <li><b>Account data:</b> your name, work email, organisation, role and sign-in details. If you sign in with Google, we receive your name and email from Google.</li>
+    <li><b>Venture data you submit:</b> descriptions, company details, uploaded documents, and the findings, comments, outcomes and decisions recorded against them.</li>
+    <li><b>Free audit data:</b> your work email and the venture details you enter.</li>
+    <li><b>Activity and security data:</b> a log of actions taken in your workspace, sign-in events and technical data needed to keep the service secure.</li>
+    <li><b>Data in your browser:</b> your sign-in session and display preferences. The public demo workspace stores its sample data only in your browser.</li>
+  </ul>`],
+  ['How we use it', html`<ul>
+    <li>To run audits and produce reports, scores and alerts.</li>
+    <li>To manage your account, your organisation's members and their access.</li>
+    <li>To send service emails such as verification, invitations, alerts and digests.</li>
+    <li>To keep AVA secure, prevent misuse and keep a record of changes.</li>
+    <li>To keep scores reproducible and monitor their consistency over time.</li>
+  </ul>`],
+  ['How AI processes your data', html`<p>To produce an audit, the venture information and documents you submit are sent to a <b>third-party AI model provider</b>, which processes them on our behalf and under our instructions as our processor, under a written data processing agreement. AVA's agents may also search publicly available web sources about the venture.</p>
+    <p>We do not use your submitted data to train AI models, and our AI provider is not permitted to use it for that purpose. [CONFIRM WITH LEGAL]</p>
+    <p>Scores and directives are calculated by AVA's own rules from the findings. They are decision support for people, not automated decisions with legal or similarly significant effects on you.</p>`],
+  ['Who we share it with', html`<p>We share personal data only with:</p><ul>
+    <li><b>Service providers acting as our processors:</b> hosting and infrastructure, database and file storage, a third-party AI model provider, and email delivery.</li>
+    <li><b>Members of your organisation,</b> according to their role.</li>
+    <li><b>People you choose to share a report with,</b> through a share link you create. You can set a password and expiry, and revoke the link at any time.</li>
+    <li><b>Authorities,</b> where the law requires it.</li>
+  </ul><p>We do not sell personal data.</p>`],
+  ['Where your data is stored', html`<p>Our database and uploaded files are stored in the United Kingdom (London). Some service providers, including our AI model provider, may process data outside the United Kingdom. Where they do, we protect it with [TRANSFER SAFEGUARD, e.g. the UK International Data Transfer Agreement or Addendum]. [CONFIRM WITH LEGAL]</p>`],
+  ['Our lawful bases', html`<ul>
+    <li><b>Contract:</b> to provide the service you or your organisation signed up for.</li>
+    <li><b>Legitimate interests:</b> to keep AVA secure, prevent misuse and improve the service.</li>
+    <li><b>Consent:</b> for any optional marketing, which you can withdraw at any time.</li>
+    <li><b>Legal obligation:</b> where the law requires us to keep or disclose data.</li>
+  </ul>`],
+  ['How long we keep it', html`<p>We keep account and workspace data for as long as your organisation's account is active, then for [RETENTION PERIOD] before deleting it. Free audit data is kept for [FREE AUDIT RETENTION PERIOD]. The record of actions is kept for [AUDIT LOG RETENTION PERIOD]. [CONFIRM WITH LEGAL]</p>`],
+  ['Your rights', html`<p>Under UK data protection law you can ask to access, correct, delete, restrict or transfer your personal data, and object to how we use it. Email [PRIVACY EMAIL] and we will respond within one month. If you are unhappy with our response, you can complain to the Information Commissioner's Office at ico.org.uk.</p>`],
+  ['How we protect it', html`<ul>
+    <li>Data is encrypted in transit.</li>
+    <li>Access inside an organisation is limited by role and enforced in the database itself.</li>
+    <li>Passwords are handled by our authentication provider and never stored by AVA in readable form.</li>
+    <li>Every change to workspace data is logged.</li>
+  </ul>`],
+  ['Changes to this policy', html`<p>We will post any changes here and update the date below. If a change materially affects how we use your data, we will tell account owners by email.</p>`],
+];
+
+export const privacy = {
+  title: 'Privacy policy · AVA',
+  className: 'legal-screen',
+  render() {
+    return html`<article class="legal-page" aria-labelledby="pg-title">
+  <span class="lbl">Draft for legal review</span>
+  <h1 id="pg-title" class="display-m">Privacy policy</h1>
+  <p class="legal-lead">How AVA collects, uses, stores and protects personal and company data.</p>
+  ${PRIVACY.map(([h, body]) => html`<section class="legal-sec"><h2>${h}</h2>${body}</section>`)}
+  <p class="small muted">Last updated ${PRIVACY_UPDATED}. Bracketed items are confirmed before launch.</p>
+</article>`;
+  },
+};
 export const terms = legal('Terms', '[TERMS] The terms that govern use of AVA by organisations and their members.');
 export const trust = legal('Trust centre', '[CONFIRM WITH LEGAL] Security, data handling, model version pinning, calibration and how AVA keeps scores reproducible.');
