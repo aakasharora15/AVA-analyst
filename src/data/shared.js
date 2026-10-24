@@ -2,6 +2,7 @@
 // shapes and enforce the same rules in the UI.
 
 import { CALIBRATION, CALIBRATIONS, SECTIONS } from '../engine/config.js';
+import PLAN_LIMITS from '../../config/plans.json' with { type: 'json' };
 import { scoreExcludingDismissed, individualEffects, traceByCategory } from '../engine/score.js';
 import { previouslyDismissed } from '../engine/compare.js';
 
@@ -59,8 +60,11 @@ export function inputProblem({ title = '', description = '' } = {}) {
 }
 
 // Plans (ids match src/content/business.js and the server's DEEP_AUDIT_PLANS).
-export const planId = (plan) => String(plan || 'pro').trim().toLowerCase().replace(/\s+/g, '-');
-export const canDeepAudit = (org) => ['pro-max', 'enterprise'].includes(planId(org && org.plan));
+export const planId = (plan) => {
+  const id = String(plan || PLAN_LIMITS.default).trim().toLowerCase().replace(/\s+/g, '-');
+  return PLAN_LIMITS.plans[id] ? id : PLAN_LIMITS.default;
+};
+export const canDeepAudit = (org) => !!PLAN_LIMITS.plans[planId(org && org.plan)].deep;
 
 export const todayIso = () => new Date().toISOString().slice(0, 10);
 

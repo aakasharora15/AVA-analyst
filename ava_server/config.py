@@ -63,13 +63,18 @@ class Settings:
         )
 
 
-# Plans that may run a Deep audit. Plan ids match src/content/business.js.
-DEEP_AUDIT_PLANS = {"pro-max", "enterprise"}
+# Plan entitlements (config/plans.json, shared with the website).
+with open(ROOT / "config" / "plans.json", encoding="utf-8") as _fh:
+    PLANS_CFG = json.load(_fh)
+PLANS = PLANS_CFG["plans"]
+DEFAULT_PLAN = PLANS_CFG["default"]
+DEEP_AUDIT_PLANS = {k for k, v in PLANS.items() if v["deep"]}
 
 
 def plan_id(plan: str | None) -> str:
     """Normalise an organisation's stored plan name ("Pro Max", "pro-max") to its id."""
-    return str(plan or "pro").strip().lower().replace(" ", "-")
+    pid = str(plan or DEFAULT_PLAN).strip().lower().replace(" ", "-")
+    return pid if pid in PLANS else DEFAULT_PLAN
 
 
 def model_for(depth: str, cfg: "Settings | None" = None) -> str:

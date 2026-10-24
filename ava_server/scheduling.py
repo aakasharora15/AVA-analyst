@@ -55,10 +55,11 @@ def queue_due(today: date | None = None) -> list[str]:
         if running:
             continue
         from .lifecycle import InsufficientInput
+        from .plans import AllowanceReached
         try:
             queued.append(create_audit(None, row["id"], trigger="scheduled"))
-        except InsufficientInput:
-            pass  # description too thin to audit; next_run still moves on below
+        except (InsufficientInput, AllowanceReached):
+            pass  # too thin to audit, or the plan's allowance is used; next_run still moves on below
         with db.system() as c:
             org = {"default_cadence": row["default_cadence"]}
             c.execute("update companies set scheduled_audit = null, next_run = %s where id = %s",

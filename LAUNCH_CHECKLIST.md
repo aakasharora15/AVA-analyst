@@ -16,6 +16,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] 1.7 Auth settings: email confirmation on, password 12+ with upper/lower/digit/symbol, secure password change on, Site URL https://ava-analyst.vercel.app, redirects ava-analyst.vercel.app/** and localhost:5173/** (2026-10-23)
 - [ ] 1.8 Auth emails: custom SMTP (Resend). Blocked on owning a domain: Supabase's built-in email only reaches project team members, so public sign-up needs this
 - [x] 1.9 Enable pg_cron and pg_net (2026-10-23)
+- [ ] 1.14 Apply migration 6 (supabase/migrations/20261024000003_trial.sql): free trial for new organisations
 - [x] 1.13 Apply migration 5 (supabase/migrations/20261024000002_plans_deep_audit.sql): Deep audit flag, plan ids, plans change only through billing (2026-10-24)
 - [x] 1.12 Apply migration 4 (supabase/migrations/20261024000001_hide_model.sql): users can no longer read which AI model ran an audit (2026-10-24)
 - [~] 1.10 Google sign-in: Google Cloud project "ava-verdict" (dedicated AVA Verdict account), OAuth client "AVA Verdict staging" (External, Testing), Supabase Google provider saved. Remaining: rotate the secret exposed in a screenshot, test once the site URL is set
@@ -61,7 +62,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 ## Stage 6. Build before or soon after first client
 
 - [ ] 6.1 Read Word, PowerPoint and Excel files (decks often arrive as .pptx)
-- [ ] 6.2 Billing (plans, payment, limits)
+- [~] 6.2 Billing: new organisations get a 14-day trial (3 audits, 3 seats); audit allowances enforced on the server for every plan (config/plans.json). Remaining: Stripe checkout, plan changes from Stripe, invoices
 - [ ] 6.3 Error monitoring and failed-audit alerts
 - [ ] 6.4 Internal admin screen for drift reports and holds
 
@@ -73,6 +74,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Log
 
+- 2026-10-24: Free usage closed: new organisations start on a 14-day trial with 3 audits; every plan's audit allowance is checked before any model call. Failed or declined audits never count.
 - 2026-10-24: Plans and models: every plan runs the standard engine (Sonnet); Pro Max and Enterprise can run a Deep audit (Opus). Plans change only through billing, enforced in the database.
 - 2026-10-24: The AI model is internal: removed from /api/health and shared reports, provider error text kept to server logs, model columns unreadable by users once migration 4 is applied.
 - 2026-10-24: Honest-score gate: thin or nonsense inputs are refused before any model call (quality.py, mirrored in the forms), and the Orchestrator can decline to score (assessable=false) with no score issued and no usage counted. Free audit always runs for real, even with the demo open. Prompts edited in place while still unapproved.

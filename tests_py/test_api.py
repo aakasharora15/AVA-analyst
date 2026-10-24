@@ -366,3 +366,39 @@ def test_every_plan_runs_the_standard_engine_and_pro_max_can_go_deep(api):
     # Users see the depth, never the model.
     with db.as_user(w["users"]["Viewer"]) as c:
         assert c.execute("select depth from audits where id = %s", (deep,)).fetchone()["depth"] == "deep"
+
+
+def test_new_organisations_start_on_a_capped_free_trial(api):
+    client, w = api
+    with db.system() as c:
+        uid = str(c.execute("insert into auth.users (email) values (%s) returning id", (f"trial-{w['tag']}@fund.example",)).fetchone()["id"])
+    org = client.post("/api/orgs", json={"name": "Trial Fund"}, headers=token(uid)).json()["orgId"]
+    with db.system() as c:
+        o = c.execute("select plan, trial_ends_at, seat_limit, created_at from organisations where id = %s", (org,)).fetchone()
+        assert o["plan"] == "trial" and o["seat_limit"] == 3
+        assert 13 <= (o["trial_ends_at"] - o["created_at"]).days <= 14
+        cos = [c.execute("insert into companies (org_id, title, description, industry, country) values (%s, %s, %s, 'Fintech', 'UK') returning id",
+                         (org, f"T{i}", DESC)).fetchone()["id"] for i in range(5)]
+    started = [client.post("/api/audits", json={"companyId": cid}, headers=token(uid)) for cid in cos[:3]]
+    assert all(r.status_code == 200 for r in started)
+    over = client.post("/api/audits", json={"companyId": cos[3]}, headers=token(uid))
+    assert over.status_code == 402 and over.json()["state"] == "upgrade" and "3 audits" in over.json()["error"]
+    # Failed or declined audits never count against the allowance.
+    with db.system() as c:
+        c.execute("update audits set status = 'failed', counted_against_usage = false where id = %s", (started[0].json()["auditId"],))
+    assert client.post("/api/audits", json={"companyId": cos[3]}, headers=token(uid)).status_code == 200
+    # Once the trial period ends, no more audits until a plan is chosen.
+    with db.system() as c:
+        c.execute("update organisations set trial_ends_at = now() - interval '1 day' where id = %s", (org,))
+    ended = client.post("/api/audits", json={"companyId": cos[4]}, headers=token(uid))
+    assert ended.status_code == 402 and "trial has ended" in ended.json()["error"]
+
+
+def test_paid_plan_monthly_allowance(api):
+    client, w = api
+    with db.system() as c:
+        c.execute("update organisations set plan = 'basic' where id = %s", (w["org"],))
+        for _ in range(20):
+            c.execute("insert into audits (org_id, company_id, status) values (%s, %s, 'complete')", (w["org"], w["company"]))
+    r = client.post("/api/audits", json={"companyId": w["company"]}, headers=as_(w, "Analyst"))
+    assert r.status_code == 402 and "Basic plan includes 20 audits a month" in r.json()["error"]

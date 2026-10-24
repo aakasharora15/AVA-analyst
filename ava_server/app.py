@@ -27,9 +27,10 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from . import db, drift, emailer, lifecycle, scheduling
+from .plans import AllowanceReached, trial_end
 from .quality import input_problem
 from .auth import cron_guard, current_user
-from .config import DEEP_AUDIT_PLANS, plan_id, settings
+from .config import DEEP_AUDIT_PLANS, PLANS, plan_id, settings
 
 app = FastAPI(title="AVA API", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -57,6 +58,11 @@ async def _http_error(_: Request, exc: HTTPException):
 @app.exception_handler(lifecycle.InsufficientInput)
 async def _insufficient(_: Request, exc: lifecycle.InsufficientInput):
     return JSONResponse({"error": str(exc), "state": "insufficient"}, status_code=422)
+
+
+@app.exception_handler(AllowanceReached)
+async def _allowance(_: Request, exc: AllowanceReached):
+    return JSONResponse({"error": str(exc), "state": "upgrade"}, status_code=402)
 
 
 @app.exception_handler(PermissionError)
@@ -521,8 +527,8 @@ def import_companies(body: ImportIn, user: str = Depends(current_user)):
         for cid in created:
             try:
                 audits.append(lifecycle.create_audit(user, cid, trigger="import"))
-            except lifecycle.InsufficientInput:
-                not_audited.append(cid)  # added, but the description is too thin to audit yet
+            except (lifecycle.InsufficientInput, AllowanceReached):
+                not_audited.append(cid)  # added, but too thin to audit yet or over the plan's allowance
     return {"created": created, "rejected": rejected, "audits": audits, "notAudited": not_audited}
 
 
@@ -635,7 +641,9 @@ def create_org(body: OrgIn, user: str = Depends(current_user)):
         if not email:
             raise HTTPException(401, "Sign in to continue")
         c.execute("insert into profiles (user_id, email) values (%s, %s) on conflict (user_id) do nothing", (user, email["email"]))
-        org = c.execute("insert into organisations (name, kind) values (%s, %s) returning id", (body.name.strip(), body.kind)).fetchone()["id"]
+        # Every new organisation starts on the free trial (config/plans.json).
+        org = c.execute("insert into organisations (name, kind, plan, trial_ends_at, seat_limit) values (%s, %s, 'trial', %s, %s) returning id",
+                        (body.name.strip(), body.kind, trial_end(), PLANS["trial"]["seats"])).fetchone()["id"]
         c.execute("insert into memberships (org_id, user_id, role) values (%s, %s, 'Owner')", (org, user))
     return {"orgId": org}
 

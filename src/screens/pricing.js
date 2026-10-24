@@ -1,6 +1,6 @@
 import { html } from '../lib/html.js';
 
-import { BUSINESS, PLANS, contactHref } from '../content/business.js';
+import { BUSINESS, PLANS, TRIAL, contactHref } from '../content/business.js';
 
 const FEATURES = {
   basic: ['Scored, cited audit reports', 'Ideas, campaigns, strategies and startups', 'Share a report with a manager or investor', 'PDF export'],
@@ -20,7 +20,7 @@ const cards = () => [
     tag: p.id === 'pro' ? 'Most popular' : p.name, tagClass: p.id === 'pro' ? 'tag-on-hero' : 'tag-info',
     name: p.name, price: p.price, unit: p.unit, body: p.for,
     features: [`${p.audits} audits a month`, `${p.seats} ${p.seats === 1 ? 'seat' : 'seats'}`, ...FEATURES[p.id]],
-    cta: { label: 'Get started', href: '/sign-in?mode=up', primary: p.id === 'pro' },
+    cta: { label: 'Start free trial', href: '/sign-in?mode=up', primary: p.id === 'pro' },
   })),
 ];
 
@@ -60,7 +60,7 @@ export default {
   <div class="stars" aria-hidden="true"></div>
   <span class="lbl p-hero-lbl">Pricing</span>
   <h1 id="pricing-title" class="p-hero-title">One honest verdict, at every scale</h1>
-  <p class="p-hero-sub">From a student testing an idea to a fund monitoring its portfolio. Every plan runs the same audit; plans differ in volume, seats and portfolio tools.</p>
+  <p class="p-hero-sub">From a student testing an idea to a fund monitoring its portfolio. Every plan runs the same audit; plans differ in volume, seats and portfolio tools. Start with a ${TRIAL.trialDays}-day free trial: ${TRIAL.audits} audits, no card needed.</p>
 </section>
 
 <section class="p-plans" aria-label="Plans">

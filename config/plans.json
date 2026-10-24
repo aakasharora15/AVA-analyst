@@ -1,0 +1,11 @@
+{
+  "_comment": "Plan entitlements, shared by the server (allowances, seats, Deep audit) and the website. Prices and descriptions live in src/content/business.js. null means no fixed limit.",
+  "default": "trial",
+  "plans": {
+    "trial": { "name": "Free trial", "audits": 3, "auditsPer": "trial", "seats": 3, "deep": false, "trialDays": 14 },
+    "basic": { "name": "Basic", "audits": 20, "auditsPer": "month", "seats": 1, "deep": false },
+    "pro": { "name": "Pro", "audits": 199, "auditsPer": "month", "seats": 3, "deep": false },
+    "pro-max": { "name": "Pro Max", "audits": 499, "auditsPer": "month", "seats": 10, "deep": true },
+    "enterprise": { "name": "Enterprise", "audits": null, "auditsPer": "month", "seats": null, "deep": true }
+  }
+}

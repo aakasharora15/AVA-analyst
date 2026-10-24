@@ -51,7 +51,7 @@ def world(database_url):
     tag = uuid.uuid4().hex[:6]
     users = {}
     with db.system() as c:
-        org = c.execute("insert into organisations (name) values (%s) returning id", (f"Fund {tag}",)).fetchone()["id"]
+        org = c.execute("insert into organisations (name, plan) values (%s, 'pro-max') returning id", (f"Fund {tag}",)).fetchone()["id"]
         for role in ROLES + ["Guest"]:
             uid = c.execute("insert into auth.users (email) values (%s) returning id", (f"{role.lower()}-{tag}@fund.example",)).fetchone()["id"]
             c.execute("insert into profiles (user_id, name, email) values (%s, %s, %s)", (uid, f"{role} {tag}", f"{role.lower()}-{tag}@fund.example"))

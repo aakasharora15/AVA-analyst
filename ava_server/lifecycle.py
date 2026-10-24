@@ -16,6 +16,7 @@ from . import db, emailer
 from .agents import AgentError, AgentRunner, build_context
 from .config import AGENTS, CALIBRATION, CALIBRATIONS, SECTIONS, model_for, settings
 from .engine import score_audit, score_excluding_dismissed
+from .plans import check_allowance
 from .quality import input_problem
 from .rules import checkpoints, evaluate_alerts
 
@@ -53,11 +54,13 @@ def create_audit(user_id: str | None, company_id: str, trigger: str = "manual", 
     """Queue an audit. The insert runs as the user so RLS enforces who may run audits.
     Refuses inputs AVA cannot assess, before any model call is made."""
     with db.system() as c:
-        co = c.execute("select title, description from companies where id = %s", (company_id,)).fetchone()
-    if co:
-        problem = input_problem(co)
-        if problem:
-            raise InsufficientInput(problem)
+        co = c.execute("select title, description, org_id from companies where id = %s", (company_id,)).fetchone()
+        if co:
+            problem = input_problem(co)
+            if problem:
+                raise InsufficientInput(problem)
+            # Plan allowance, before any model call is made.
+            check_allowance(c, c.execute("select * from organisations where id = %s", (co["org_id"],)).fetchone())
     if user_id:
         with db.as_user(user_id) as c:
             row = c.execute("select org_id from companies where id = %s", (company_id,)).fetchone()

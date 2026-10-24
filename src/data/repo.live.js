@@ -70,7 +70,7 @@ function mapOrg(o, ownerId) {
     cadence: o.default_cadence, alertThreshold: ALERT_RULES.scoreMove, currency: o.currency,
     retention: o.retention_period || 'Deleted within 90 days of the account closing', region: o.storage_region, branding: o.branding,
     alertRules: o.alert_rules, delivery: o.delivery, findingDisplay: o.finding_display, integrations: o.integrations,
-    holdMode: o.hold_mode, logoUrl: o.logo_url, ownerId,
+    holdMode: o.hold_mode, logoUrl: o.logo_url, ownerId, trialEndsAt: o.trial_ends_at || null,
   };
 }
 

@@ -1,5 +1,6 @@
 import { html } from '../lib/html.js';
-import { BUSINESS, PLANS, contactHref } from '../content/business.js';
+import { BUSINESS, PLANS, TRIAL, contactHref } from '../content/business.js';
+import { planId } from '../data/shared.js';
 import {
   getOrg, updateOrg, getUsers, getCurrentUser, updateProfile, inviteMember, changeRole, removeMember, actAs,
   getAuditLog, getCompanies, can, signOut, resetDemo, transferOwnership, MODE,
@@ -84,7 +85,8 @@ function team(users, me) {
 }
 
 function billing(o, companies, users, audits) {
-  const plan = PLANS.find((p) => [p.id, p.name.toLowerCase()].includes(String(o.plan || '').toLowerCase())) || null;
+  const pid = planId(o.plan);
+  const plan = pid === 'trial' ? { ...TRIAL, price: 'Free', unit: 'trial', for: o.trialEndsAt ? `Your trial ends on ${fmtDate(o.trialEndsAt.slice(0, 10))}. Choose a plan any time to keep going.` : 'Choose a plan any time to keep going.' } : (PLANS.find((p) => p.id === pid) || null);
   const seatsUsed = users.filter((u) => u.status === 'active').length;
   const changeHref = contactHref(BUSINESS.billingEmail, '/pricing', 'AVA plan change');
   return html`<div class="ac-bill">
@@ -95,12 +97,12 @@ function billing(o, companies, users, audits) {
     <span class="small">${o.renewal ? `Renews ${o.renewal}. ` : ''}${plan ? plan.for : 'Plan details are agreed with your organisation.'}</span>
   </div>
   <div class="card card-pad stack-sm">
-    <h2 class="card-title">Usage this month</h2>
-    <div class="kv"><span class="muted">Audits</span><b>${audits.counted}${plan ? ` of ${plan.audits}` : ''} counted · ${audits.failed} not counted</b></div>
+    <h2 class="card-title">${pid === 'trial' ? 'Trial usage' : 'Usage this month'}</h2>
+    <div class="kv"><span class="muted">Audits${pid === 'trial' ? ' in your trial' : ''}</span><b>${audits.counted}${plan && plan.audits != null ? ` of ${plan.audits}` : ''} counted · ${audits.failed} not counted</b></div>
     <div class="kv"><span class="muted">Seats</span><b>${seatsUsed}${plan ? ` of ${plan.seats}` : ''}</b></div>
     <div class="kv"><span class="muted">Monitored companies</span><b>${companies.length}</b></div>
     <p class="hint">Audits that issue no score, failed or declined, never count towards your allowance.</p>
-    <div class="row-actions"><a class="btn" href="${changeHref}"${BUSINESS.billingEmail ? html` data-external` : ''}>${BUSINESS.billingEmail ? 'Contact us to change plan' : 'Compare plans'}</a></div>
+    <div class="row-actions">${pid === 'trial' ? html`<a class="btn btn-primary" href="/pricing">Choose a plan</a>` : html`<a class="btn" href="${changeHref}"${BUSINESS.billingEmail ? html` data-external` : ''}>${BUSINESS.billingEmail ? 'Contact us to change plan' : 'Compare plans'}</a>`}</div>
   </div>
   <div class="card card-pad stack-sm">
     <h2 class="card-title">Invoices</h2>
