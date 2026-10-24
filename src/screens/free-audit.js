@@ -1,6 +1,7 @@
 import { html } from '../lib/html.js';
 import { checkWorkEmail, runFreeAudit, sendFreeAudit } from '../data/repo.js';
 import { inputProblem } from '../data/shared.js';
+import { BUSINESS, contactHref } from '../content/business.js';
 import { AGENTS } from '../engine/config.js';
 import { meter, sevTag, vClass, icon } from '../components/ui.js';
 import { toast } from '../components/sheet.js';
@@ -28,7 +29,7 @@ function resultView(r) {
   <div class="chips">${counts.map(([s, n]) => html`<span class="tag sev-${s.toLowerCase()}">${n} ${s}</span>`)}</div>
   <ul class="fa-ghosts" aria-hidden="true">${Array.from({ length: Math.min(3, locked.total) }, () => html`<li><span></span><span></span></li>`)}</ul>
   <p class="small muted">The full product shows every finding with citations, the score trace, history and a PDF report.</p>
-  <div class="row-actions"><a class="btn btn-primary" href="mailto:[SALES EMAIL]?subject=AVA%20walkthrough" data-external>Book a walkthrough</a><a class="btn" href="/pricing">See pricing</a></div>
+  <div class="row-actions">${BUSINESS.salesEmail ? html`<a class="btn btn-primary" href="${contactHref(BUSINESS.salesEmail, '', 'AVA walkthrough')}" data-external>Book a walkthrough</a>` : html`<a class="btn btn-primary" href="/sign-in?demo=1">Explore the live demo</a>`}<a class="btn" href="/pricing">See pricing</a></div>
 </div>
 <form class="card card-pad stack-sm" data-send novalidate>
   <b>Founder? Send this result to an investor.</b>
@@ -60,7 +61,7 @@ export default {
       </div>
       <div class="fld"><label for="fa-mail">Work email</label><input id="fa-mail" name="email" type="email" class="inp" autocomplete="email" aria-describedby="fa-e-email fa-mail-h"><span class="err" id="fa-e-email" data-e="email"></span><span class="hint" id="fa-mail-h">We send your result here. Free email addresses are not accepted.</span></div>
       <button type="submit" class="btn btn-primary btn-lg">Run free audit</button>
-      <p class="hint">[CONFIRM WITH LEGAL] Your submission is used only to produce this audit. <a class="link" href="/privacy">Privacy</a></p>
+      <p class="hint">Your submission is used only to produce this audit and is never used to train AI models. <a class="link" href="/privacy">Privacy policy</a></p>
     </form>
     <section class="fa-result" aria-live="polite" data-result>
       <div class="hero-panel fa-wait"><div class="stars" aria-hidden="true"></div><span class="lbl">Resilience Score</span><div class="hero-num run-pending">--</div><p class="small">Fill in the four fields and your work email, then run the audit. Your result appears here.</p></div>

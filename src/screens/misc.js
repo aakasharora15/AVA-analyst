@@ -1,6 +1,7 @@
 // Guest share view, invite acceptance, error pages and placeholder legal pages.
 
 import { html } from '../lib/html.js';
+import { BUSINESS } from '../content/business.js';
 import { openSharedReport, getUsers, getOrg, getInvite, acceptInvite, getSession } from '../data/repo.js';
 import { reportBody } from './report.js';
 import { logo } from '../components/logo.js';
@@ -96,26 +97,14 @@ export const maintenance = {
   title: 'Scheduled maintenance · AVA',
   className: 'planned-screen',
   render() {
-    return simple({ label: 'Scheduled maintenance', title: 'AVA is down for scheduled maintenance', body: html`<p>We expect to be back by [TIME, DATE]. Audits that were running will resume automatically. Nothing you saved is affected.</p>`, actions: [{ href: '/', label: 'Back to home' }] });
+    return simple({ label: 'Scheduled maintenance', title: 'AVA is down for scheduled maintenance', body: html`<p>We expect to be back shortly. Audits that were running will resume automatically. Nothing you saved is affected.</p>`, actions: [{ href: '/', label: 'Back to home' }] });
   },
 };
-
-const legal = (name, intro) => ({
-  title: `${name} · AVA`,
-  className: 'planned-screen',
-  render() {
-    return simple({ label: '[CONFIRM WITH LEGAL]', title: name, body: html`<p>${intro}</p><p class="muted">Final wording to be supplied before launch.</p>`, actions: [{ href: '/', label: 'Back to home' }] });
-  },
-});
 
 // Privacy policy. Processors are named by category, including the AI model
-// provider. The operator's details come from LEGAL_ENTITY; a missing detail is
-// left out rather than shown as a placeholder.
-const LEGAL_ENTITY = {
-  name: 'AVA Verdict', // legal name of the operating company or sole trader
-  address: '', // registered address
-  privacyEmail: '', // address that receives privacy requests
-};
+// provider. Operator details come from src/content/business.js; a missing
+// detail is left out rather than shown as a placeholder.
+const LEGAL_ENTITY = { name: BUSINESS.legalName, address: BUSINESS.address, privacyEmail: BUSINESS.privacyEmail };
 const PRIVACY_UPDATED = '24 October 2026';
 const contactLine = LEGAL_ENTITY.privacyEmail
   ? html`email <a class="link" href="mailto:${LEGAL_ENTITY.privacyEmail}">${LEGAL_ENTITY.privacyEmail}</a>`
@@ -180,5 +169,89 @@ export const privacy = {
 </article>`;
   },
 };
-export const terms = legal('Terms', '[TERMS] The terms that govern use of AVA by organisations and their members.');
-export const trust = legal('Trust centre', '[CONFIRM WITH LEGAL] Security, data handling, model version pinning, calibration and how AVA keeps scores reproducible.');
+
+// Shared layout for long-form legal and trust pages.
+const longPage = ({ title, docTitle, lead, sections, updated }) => ({
+  title: `${docTitle} · AVA`,
+  className: 'legal-screen',
+  render() {
+    return html`<article class="legal-page" aria-labelledby="pg-title">
+  <span class="lbl">${title === 'Trust centre' ? 'Trust' : 'Legal'}</span>
+  <h1 id="pg-title" class="display-m">${title}</h1>
+  <p class="legal-lead">${lead}</p>
+  ${sections.map(([h, body]) => html`<section class="legal-sec"><h2>${h}</h2>${body}</section>`)}
+  ${updated ? html`<p class="small muted">Last updated ${updated}.</p>` : ''}
+</article>`;
+  },
+});
+
+export const terms = longPage({
+  title: 'Terms of service', docTitle: 'Terms', updated: PRIVACY_UPDATED,
+  lead: `The terms for using AVA, operated by ${BUSINESS.legalName}. By creating an account or running an audit, you agree to them.`,
+  sections: [
+    ['Using AVA', html`<p>AVA audits ventures, ideas, campaigns and strategies and returns a Resilience Score, a directive and the findings behind them. You must be at least 18 and able to agree to these terms. If you use AVA for an organisation, you confirm you are allowed to accept these terms on its behalf.</p>`],
+    ['Your account', html`<ul>
+      <li>Keep your sign-in details secure. You are responsible for activity under your account.</li>
+      <li>Owners and Admins control who joins their organisation and what each role can do.</li>
+      <li>Tell us straight away if you think your account has been misused.</li>
+    </ul>`],
+    ['AVA is decision support, not advice', html`<p><b>AVA does not provide investment, financial, legal or tax advice, and is not a regulated financial adviser.</b> Scores, directives and findings are produced by automated analysis, including AI, and can be incomplete or wrong. Use them as one input alongside your own judgement and professional advice. You remain responsible for any decision you make.</p>
+      <p>AVA declines to score a venture when the information supplied is too thin to assess. A score is never a guarantee of any outcome.</p>`],
+    ['Your content', html`<p>You keep ownership of everything you submit, including descriptions, documents, comments and outcomes. You give us permission to process it only to provide AVA to you, as described in our <a class="link" href="/privacy">privacy policy</a>. You confirm you have the right to submit it, including any third-party information in it. We do not use your content to train AI models.</p>`],
+    ['Acceptable use', html`<p>Do not use AVA to:</p><ul>
+      <li>break the law or infringe anyone's rights, including confidentiality and data protection;</li>
+      <li>submit material you are not entitled to share;</li>
+      <li>probe, overload or attempt to bypass AVA's security, limits or access controls;</li>
+      <li>resell or provide AVA to others without our written agreement;</li>
+      <li>build a competing product from AVA's output, prompts or methodology.</li>
+    </ul>`],
+    ['Plans, payment and cancellation', html`<ul>
+      <li>Paid plans are billed monthly in advance at the price shown on our <a class="link" href="/pricing">pricing page</a> when you subscribe.</li>
+      <li>Each plan includes a monthly audit allowance and a number of seats. Unused audits do not roll over. Audits that issue no score, failed or declined, do not count.</li>
+      <li>You can cancel at any time. Your plan stays active until the end of the period you have paid for.</li>
+      <li>We give at least 30 days' notice of any price change, which applies from your next billing period.</li>
+    </ul>`],
+    ['Free audit', html`<p>The free audit is limited to one per company email domain each month and requires a work email. We may change or withdraw the free audit at any time.</p>`],
+    ['Sharing reports', html`<p>You can share a report through a link with a password and an expiry date. You are responsible for who you share with. Revoking a link stops further access immediately.</p>`],
+    ['Availability and changes', html`<p>We work to keep AVA available and secure but do not guarantee uninterrupted service. We may improve or change features. If a change materially reduces a paid plan, we will tell you in advance and you may cancel.</p>`],
+    ['Liability', html`<p>Nothing in these terms limits liability that cannot be limited by law, including for death or personal injury caused by negligence, or fraud. Otherwise, we are not liable for indirect or consequential loss, or for loss of profit, revenue, opportunity or investment returns, including losses from decisions made using AVA. Our total liability in any 12-month period is limited to the amount you paid us in that period.</p>`],
+    ['Ending your account', html`<p>You can close your account at any time. We may suspend or close an account that breaks these terms, with notice where reasonable. On closure, your data is deleted as set out in our <a class="link" href="/privacy">privacy policy</a>.</p>`],
+    ['Changes to these terms', html`<p>We will post changes here and update the date below. If a change is material, we will tell account owners by email at least 30 days before it takes effect.</p>`],
+    ['Governing law', html`<p>These terms are governed by the law of England and Wales, and the courts of England and Wales have exclusive jurisdiction.</p>`],
+  ],
+});
+
+export const trust = longPage({
+  title: 'Trust centre', docTitle: 'Trust centre', updated: PRIVACY_UPDATED,
+  lead: 'How AVA keeps your data secure and its scores honest and consistent.',
+  sections: [
+    ['Your data stays yours', html`<ul>
+      <li>Data and files are stored in the United Kingdom (London) and encrypted in transit.</li>
+      <li>What you submit is used only to produce your audits. It is never used to train AI models.</li>
+      <li>Service providers, including our AI model provider, process data only on our instructions under data processing agreements.</li>
+      <li>Read the full detail in our <a class="link" href="/privacy">privacy policy</a>.</li>
+    </ul>`],
+    ['Access control', html`<ul>
+      <li>Four roles, Owner, Admin, Analyst and Viewer, decide who can see and change what.</li>
+      <li>These permissions are enforced in the database itself, not only in the app, so one organisation can never read another's data.</li>
+      <li>Shared reports use links with a password option and an expiry date, can be revoked at any time, and every view is logged.</li>
+    </ul>`],
+    ['A full record of changes', html`<p>Every change in a workspace is logged: who did it, what changed and when. Dismissing a finding requires a written reason, and the original score is never altered by later decisions.</p>`],
+    ['How the score is calculated', html`<ul>
+      <li>Six specialist agents each attack the venture from one angle. They produce findings; they do not set the score.</li>
+      <li>The Resilience Score and directive are calculated by AVA's published rules from those findings, so the same findings always produce the same score.</li>
+      <li>Every finding cites its evidence, whether from your documents or public sources.</li>
+    </ul>`],
+    ['Honest by design', html`<ul>
+      <li>AVA refuses to score a venture it cannot assess. Thin, placeholder or nonsensical inputs are rejected before analysis, and the final agent can decline to issue a score when the evidence is too weak.</li>
+      <li>A declined or failed audit never counts against your allowance.</li>
+      <li>When an agent fails, the audit is marked Partial and its directive is capped, rather than presented as complete.</li>
+    </ul>`],
+    ['Consistent over time', html`<ul>
+      <li>Every audit records the version of the scoring rules it used, so results stay comparable and traceable.</li>
+      <li>Each month, AVA re-runs a sample of past audits on their original inputs to check that scores stay consistent.</li>
+      <li>If consistency drifts beyond set limits, new verdicts are automatically marked Under review until the cause is fixed and confirmed by two reviewers.</li>
+    </ul>`],
+    ['Reporting a concern', html`<p>${BUSINESS.privacyEmail ? html`Email <a class="link" href="mailto:${BUSINESS.privacyEmail}">${BUSINESS.privacyEmail}</a> about any security or data concern.` : html`Contact the AVA Verdict team about any security or data concern.`} We investigate every report.</p>`],
+  ],
+});

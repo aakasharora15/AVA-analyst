@@ -225,3 +225,6 @@
 /* "See it with sample data" card in How it works */
 .l-demo-card { margin-top: 1.5rem; max-width: 26rem; align-items: flex-start; }
 .l-demo-card .btn { margin-top: .25rem; }
+
+/* Audience strip ("Built for") */
+.l-aud { font-weight: 600; letter-spacing: -0.01em; font-size: 1.375rem; }

@@ -66,9 +66,9 @@ const initials = (name, email) => (name || email || '?').split(/[\s@.]+/).filter
 function mapOrg(o, ownerId) {
   return {
     id: o.id, name: o.name, kind: o.kind, plan: o.plan,
-    renewal: o.renewal_date || '[RENEWAL DATE]', limit: o.company_limit ?? '[LIMIT]', seats: o.seat_limit ?? '[SEATS]',
+    renewal: o.renewal_date || null, limit: o.company_limit ?? null, seats: o.seat_limit ?? null,
     cadence: o.default_cadence, alertThreshold: ALERT_RULES.scoreMove, currency: o.currency,
-    retention: o.retention_period || '[CONFIRM WITH LEGAL]', region: o.storage_region, branding: o.branding,
+    retention: o.retention_period || 'Deleted within 90 days of the account closing', region: o.storage_region, branding: o.branding,
     alertRules: o.alert_rules, delivery: o.delivery, findingDisplay: o.finding_display, integrations: o.integrations,
     holdMode: o.hold_mode, logoUrl: o.logo_url, ownerId,
   };

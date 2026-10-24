@@ -1,26 +1,27 @@
 import { html } from '../lib/html.js';
 
-// Commercial figures stay as placeholders for the commercial team.
-const PLANS = [
+import { BUSINESS, PLANS, contactHref } from '../content/business.js';
+
+const FEATURES = {
+  basic: ['Scored, cited audit reports', 'Ideas, campaigns, strategies and startups', 'Share a report with a manager or investor', 'PDF export'],
+  pro: ['Everything in Basic', 'Monitoring and alerts when risk moves', 'Audit history and side-by-side comparison', 'Data room for your documents', 'Benchmarks and outcome tracking'],
+  'pro-max': ['Everything in Pro', 'Portfolio overview across every company', 'Team roles and permissions', 'Branded reports', 'Priority support'],
+};
+
+const cards = () => [
   {
-    tag: 'Free', tagClass: 'p-tag-free', name: 'Entry audit', price: 'Free',
-    body: 'A quick audit with minimal input and a short result. A route into the full product.',
-    features: ['One short audit', 'Resilience Score and directive', 'Top findings only'],
-    cta: { label: 'Try the free audit', href: '/free-audit' },
+    tag: 'Free', tagClass: 'p-tag-free', name: 'Free audit', price: 'Free',
+    body: 'One audit with a score, a directive and your top three findings. One per company email domain each month.',
+    features: ['Resilience Score and directive', 'Top three findings in full', 'Work email required'],
+    cta: { label: 'Run a free audit', href: '/free-audit' },
   },
-  {
-    featured: true,
-    tag: 'Annual organisation contract', tagClass: 'tag-on-hero', name: 'Portfolio', price: '[PRICE]', unit: 'per year',
-    body: 'For investment and corporate development teams monitoring companies over time.',
-    features: ['[LIMIT] monitored companies', 'Audit history and comparison', 'Cited findings and a data room', 'Alerts and benchmarking', 'PDF export', '[SEATS] seats'],
-    cta: { label: 'Talk to us', href: '/sign-in', primary: true },
-  },
-  {
-    tag: 'Enterprise', tagClass: 'tag-info', name: 'Enterprise', price: 'Custom',
-    body: 'For larger funds and corporates with compliance and brand requirements.',
-    features: ['Everything in Portfolio', 'Single sign-on', 'Audit log for compliance', 'White-label reports', 'Custom roles and onboarding'],
-    cta: { label: 'Contact sales', href: '/sign-in' },
-  },
+  ...PLANS.map((p) => ({
+    featured: p.id === 'pro',
+    tag: p.id === 'pro' ? 'Most popular' : p.name, tagClass: p.id === 'pro' ? 'tag-on-hero' : 'tag-info',
+    name: p.name, price: p.price, unit: p.unit, body: p.for,
+    features: [`${p.audits} audits a month`, `${p.seats} ${p.seats === 1 ? 'seat' : 'seats'}`, ...FEATURES[p.id]],
+    cta: { label: 'Get started', href: '/sign-in?mode=up', primary: p.id === 'pro' },
+  })),
 ];
 
 export default {
@@ -31,12 +32,12 @@ export default {
 <section class="hero-panel p-hero" aria-labelledby="pricing-title">
   <div class="stars" aria-hidden="true"></div>
   <span class="lbl p-hero-lbl">Pricing</span>
-  <h1 id="pricing-title" class="p-hero-title">Priced per organisation, not per audit</h1>
-  <p class="p-hero-sub">Annual contracts for funds, corporate teams and accelerators. Founders can try a free entry audit first.</p>
+  <h1 id="pricing-title" class="p-hero-title">One honest verdict, at every scale</h1>
+  <p class="p-hero-sub">From a student testing an idea to a fund monitoring its portfolio. Every plan runs the same audit; plans differ in volume, seats and portfolio tools.</p>
 </section>
 
 <section class="p-plans" aria-label="Plans">
-  ${PLANS.map((p) => html`<article class="${p.featured ? 'hero-panel p-plan p-plan-featured' : 'card p-plan'}">
+  ${cards().map((p) => html`<article class="${p.featured ? 'hero-panel p-plan p-plan-featured' : 'card p-plan'}">
     <span class="tag ${p.tagClass} p-plan-tag">${p.tag}</span>
     <h2 class="p-plan-name">${p.name}</h2>
     <div class="p-plan-price"><span class="num">${p.price}</span>${p.unit ? html`<span class="p-plan-unit">${p.unit}</span>` : ''}</div>
@@ -47,8 +48,8 @@ export default {
 </section>
 
 <section class="card p-note">
-  <div class="p-note-copy"><b>All prices above are placeholders.</b><span class="muted">Pricing is moving to annual organisation contracts, so figures, limits and seats are marked for the commercial team to fill in.</span></div>
-  <a class="btn btn-primary" href="/#faq">Read the FAQ</a>
+  <div class="p-note-copy"><b>Need more than Pro Max?</b><span class="muted">Enterprise plans add single sign-on, custom audit volumes, data retention terms and dedicated onboarding.</span></div>
+  <a class="btn btn-primary" href="${contactHref(BUSINESS.salesEmail, '/sign-in?demo=1', 'AVA Enterprise')}"${BUSINESS.salesEmail ? html` data-external` : ''}>${BUSINESS.salesEmail ? 'Contact sales' : 'Explore the live demo'}</a>
 </section>`;
   },
 };

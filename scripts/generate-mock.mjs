@@ -401,9 +401,9 @@ const outcomes = [
 // ---- Organisation, people, log ---------------------------------------------
 
 const org = {
-  name: 'Your Fund Name', kind: 'VC fund', plan: 'Portfolio', renewal: '[RENEWAL DATE]', limit: '[LIMIT]', seats: '[SEATS]',
-  cadence: { mode: 'quarterly', day: 1 }, alertThreshold: 5, currency: 'GBP', retention: '[CONFIRM WITH LEGAL]', region: 'United Kingdom',
-  branding: { coverName: 'Your Fund Name', footer: 'Confidential. Prepared for the investment committee.', attribution: true },
+  name: 'AVA Demo Fund', kind: 'VC fund', plan: 'Pro Max', renewal: null, limit: null, seats: null,
+  cadence: { mode: 'quarterly', day: 1 }, alertThreshold: 5, currency: 'GBP', retention: 'Deleted within 90 days of the account closing', region: 'United Kingdom',
+  branding: { coverName: 'AVA Demo Fund', footer: 'Confidential. Prepared for the investment committee.', attribution: true },
   alertRules: { directive: true, score: true, high: true, evidence: false },
   delivery: { inApp: true, email: 'weekly', immediate: true },
   ownerId: 'u1', holdMode: false,

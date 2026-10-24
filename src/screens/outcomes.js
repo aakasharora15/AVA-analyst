@@ -88,7 +88,7 @@ export default {
     <div class="card card-pad stack-sm">
       <span class="lbl">How agreement is read</span>
       ${Object.entries(AGREES_WITH).reverse().map(([d, ks]) => html`<div class="kv">${verdictTag(d)}<span class="small">${ks.map((k) => OUTCOMES[k].label).join(' or ')}</span></div>`)}
-      <p class="hint">Measured against the final directive, after any override. AVA sets the window, not the user: checkpoints at ${OUTCOME_WINDOW.firstMonths} and ${OUTCOME_WINDOW.finalMonths} months [CALIBRATE], written when the audit is issued and never edited. Small samples mislead; treat this as a trend.</p>
+      <p class="hint">Measured against the final directive, after any override. AVA sets the window, not the user: checkpoints at ${OUTCOME_WINDOW.firstMonths} and ${OUTCOME_WINDOW.finalMonths} months, written when the audit is issued and never edited. Small samples mislead; treat this as a trend.</p>
     </div>
   </aside>
   <section class="body" aria-label="Audits">

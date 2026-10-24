@@ -1,4 +1,5 @@
 import { html } from '../lib/html.js';
+import { BUSINESS, PLANS, contactHref } from '../content/business.js';
 import {
   getOrg, updateOrg, getUsers, getCurrentUser, updateProfile, inviteMember, changeRole, removeMember, actAs,
   getAuditLog, getCompanies, can, signOut, resetDemo, transferOwnership, MODE,
@@ -49,7 +50,7 @@ function org(o, users, me) {
 ${owner ? html`<section class="card card-pad stack-md ac-danger" aria-labelledby="danger-title">
   <h2 id="danger-title" class="card-title">Owner actions</h2>
   <form class="row-actions" data-transfer><label class="sr-only" for="o-new-owner">New owner</label><select id="o-new-owner" class="inp ac-inline">${users.filter((u) => u.status === 'active' && u.id !== me.id).map((u) => html`<option value="${u.id}">${u.name}</option>`)}</select><button type="submit" class="btn">Transfer ownership</button></form>
-  <div class="row-actions"><button type="button" class="btn ac-delete" data-delete-org>Delete organisation</button><span class="hint">Deletes every company, audit and file after the retention period. [CONFIRM WITH LEGAL]</span></div>
+  <div class="row-actions"><button type="button" class="btn ac-delete" data-delete-org>Delete organisation</button><span class="hint">Permanently deletes every company, audit, file and member within 90 days, as set out in our privacy policy.</span></div>
 </section>` : ''}`;
 }
 
@@ -57,7 +58,7 @@ function team(users, me) {
   const manage = can('members', me);
   const active = users.filter((u) => u.status !== 'removed');
   return html`<section class="card card-pad stack-lg" aria-labelledby="team-title">
-  <div class="r-sec-head"><h2 id="team-title" class="card-title">Team and roles</h2><span class="small muted">${active.filter((u) => u.status === 'active').length} of [SEATS] seats used</span></div>
+  <div class="r-sec-head"><h2 id="team-title" class="card-title">Team and roles</h2><span class="small muted">${active.filter((u) => u.status === 'active').length} active ${active.filter((u) => u.status === 'active').length === 1 ? 'member' : 'members'}</span></div>
   ${manage ? html`<form class="ac-invite" data-invite novalidate>
     <div class="fld"><label for="inv-email">Invite by work email</label><input id="inv-email" type="email" class="inp" name="email" autocomplete="off" aria-describedby="inv-err"></div>
     <div class="fld"><label for="inv-role">Role</label><select id="inv-role" class="inp" name="role">${ROLES.map((r) => html`<option${r === 'Analyst' ? html` selected` : ''}>${r}</option>`)}</select></div>
@@ -83,26 +84,27 @@ function team(users, me) {
 }
 
 function billing(o, companies, users, audits) {
-  const used = companies.length;
+  const plan = PLANS.find((p) => [p.id, p.name.toLowerCase()].includes(String(o.plan || '').toLowerCase())) || null;
+  const seatsUsed = users.filter((u) => u.status === 'active').length;
+  const changeHref = contactHref(BUSINESS.billingEmail, '/pricing', 'AVA plan change');
   return html`<div class="ac-bill">
   <div class="hero-panel ac-plan">
     <div class="stars" aria-hidden="true"></div>
-    <div class="r-sec-head"><span class="lbl">Plan</span><span class="tag tag-on-hero">Annual organisation contract</span></div>
-    <div class="row-actions"><span class="hero-num">${used}</span><span class="r-of">of ${o.limit} monitored companies</span></div>
-    <span class="small">Renews ${o.renewal}. Pricing is agreed per organisation. Plan changes go through your account manager, not card payment.</span>
+    <div class="r-sec-head"><span class="lbl">Plan</span><span class="tag tag-on-hero">${plan ? plan.name : o.plan}</span></div>
+    <div class="row-actions"><span class="hero-num">${plan ? plan.price : companies.length}</span><span class="r-of">${plan ? plan.unit : 'monitored companies'}</span></div>
+    <span class="small">${o.renewal ? `Renews ${o.renewal}. ` : ''}${plan ? plan.for : 'Plan details are agreed with your organisation.'}</span>
   </div>
   <div class="card card-pad stack-sm">
-    <h2 class="card-title">Usage this period</h2>
-    <div class="kv"><span class="muted">Monitored companies</span><b>${used} of ${o.limit}</b></div>
-    <div class="kv"><span class="muted">Seats</span><b>${users.filter((u) => u.status === 'active').length} of ${o.seats}</b></div>
-    <div class="kv"><span class="muted">Audits this quarter</span><b>${audits.counted} counted · ${audits.failed} failed, not counted</b></div>
-    <p class="hint">At a limit, the action is blocked and shows the limit with a contact route.</p>
-    <div class="row-actions"><a class="btn" href="mailto:[BILLING CONTACT]" data-external>Contact us to change plan</a></div>
+    <h2 class="card-title">Usage this month</h2>
+    <div class="kv"><span class="muted">Audits</span><b>${audits.counted}${plan ? ` of ${plan.audits}` : ''} counted · ${audits.failed} not counted</b></div>
+    <div class="kv"><span class="muted">Seats</span><b>${seatsUsed}${plan ? ` of ${plan.seats}` : ''}</b></div>
+    <div class="kv"><span class="muted">Monitored companies</span><b>${companies.length}</b></div>
+    <p class="hint">Audits that issue no score, failed or declined, never count towards your allowance.</p>
+    <div class="row-actions"><a class="btn" href="${changeHref}"${BUSINESS.billingEmail ? html` data-external` : ''}>${BUSINESS.billingEmail ? 'Contact us to change plan' : 'Compare plans'}</a></div>
   </div>
   <div class="card card-pad stack-sm">
     <h2 class="card-title">Invoices</h2>
-    ${['0003', '0002', '0001'].map((n) => html`<div class="kv ac-inv"><b>Invoice ${n}</b><span class="small muted">[DATE] · [AMOUNT]</span><button type="button" class="btn ac-small" data-invoice="${n}">Download</button></div>`)}
-    <div class="kv"><span class="muted">Billing contact</span><b>[BILLING CONTACT]</b></div>
+    <p class="muted small">Invoices appear here once your subscription starts.</p>
   </div>
 </div>`;
 }
@@ -248,13 +250,12 @@ export default {
         a.click();
         toast('Audit log exported.');
       }
-      if (e.target.closest('[data-invoice]')) toast('Invoices are issued by the billing team. [BILLING CONTACT]');
       if (e.target.closest('[data-signout]')) { ctx.navigate(await signOut()); }
       if (e.target.closest('[data-reset]')) { await resetDemo(); toast('Demo data reset.'); ctx.refresh(); }
       if (e.target.closest('[data-delete-org]')) {
         openSheet({
           title: 'Delete organisation',
-          body: html`<p>This deletes every company, audit, file and member for ${d.o.name}. [CONFIRM WITH LEGAL]</p><div class="fld"><label for="del-confirm">Type the organisation name to confirm</label><input id="del-confirm" class="inp" autocomplete="off"></div><div class="row-actions"><button type="button" class="btn ac-delete" data-confirm disabled>Delete organisation</button><button type="button" class="btn" data-close>Cancel</button></div>`,
+          body: html`<p>This permanently deletes every company, audit, file and member for ${d.o.name} within 90 days. It cannot be undone.</p><div class="fld"><label for="del-confirm">Type the organisation name to confirm</label><input id="del-confirm" class="inp" autocomplete="off"></div><div class="row-actions"><button type="button" class="btn ac-delete" data-confirm disabled>Delete organisation</button><button type="button" class="btn" data-close>Cancel</button></div>`,
           onMount(el, close) {
             const input = el.querySelector('#del-confirm');
             const btn = el.querySelector('[data-confirm]');

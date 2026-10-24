@@ -140,7 +140,7 @@ function openImport(ctx) {
       <p class="small">Creates <b>${ok.length}</b> compan${ok.length === 1 ? 'y' : 'ies'}. ${state.skip.size ? `${state.skip.size} row${state.skip.size === 1 ? '' : 's'} skipped.` : ''} Import creates companies, not audits.</p>
       <ul class="inner stack-sm small">${ok.map((r) => html`<li><b>${r.title}</b> · ${r.industry} · ${r.country} · ${TYPE_LABEL[r.type]}</li>`)}</ul>
       <div class="fld"><label for="imp-cad">Monitoring cadence for all</label><select id="imp-cad" class="inp" name="cadence"><option value="">Use organisation default</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="off">Off</option></select></div>
-      <label class="check"><input type="checkbox" name="auditAll"><span class="check-copy"><span>Audit all now</span><span class="hint">Uses ${ok.length} audit${ok.length === 1 ? '' : 's'} of this period's allowance ([LIMIT]).</span></span></label>
+      <label class="check"><input type="checkbox" name="auditAll"><span class="check-copy"><span>Audit all now</span><span class="hint">Uses ${ok.length} audit${ok.length === 1 ? '' : 's'} from this month's allowance.</span></span></label>
       <div class="row-actions"><button type="button" class="btn" data-imp-back>Back</button><button type="submit" class="btn btn-primary">Create companies</button></div>
     </form>`;
   };

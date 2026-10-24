@@ -14,7 +14,7 @@
 }
 .p-hero-sub { font-size: 1.1875rem; max-width: 35rem; color: var(--text-on-hero); }
 
-.p-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(21.25rem, 100%), 1fr)); gap: 1.25rem; align-items: stretch; }
+.p-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(15.5rem, 100%), 1fr)); gap: 1.25rem; align-items: stretch; }
 .p-plan { padding: 2.5rem; display: flex; flex-direction: column; gap: 1.25rem; border-radius: 28px; }
 .p-plan-featured { box-shadow: var(--hero-edge); }
 .p-plan-tag { align-self: flex-start; }
@@ -44,3 +44,7 @@
   .p-note { padding: 1.5rem; }
   .p-note .btn { width: 100%; }
 }
+
+/* Unit always on its own line, so every plan card lines up. */
+.p-plan-price { flex-wrap: wrap; }
+.p-plan-unit { flex-basis: 100%; }

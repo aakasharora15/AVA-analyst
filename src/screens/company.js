@@ -15,7 +15,7 @@ function reaudit(c, sources, ctx) {
       <div class="kv"><span class="muted">Last audit</span><b>${last ? fmtDate(last.date) : 'None'}</b></div>
       <div class="kv"><span class="muted">Inputs changed since</span><b>${c.updatedAt && last && c.updatedAt.slice(0, 10) > last.date ? 'Company details edited' : 'None'}</b></div>
       <div class="kv"><span class="muted">New files since</span><b>${newFiles.length ? newFiles.map((f) => f.title).join(', ') : 'None'}</b></div>
-      <div class="kv"><span class="muted">Usage</span><b>1 audit of this period's allowance ([LIMIT])</b></div>
+      <div class="kv"><span class="muted">Usage</span><b>1 audit from this month's allowance</b></div>
     </div>
     <form class="stack-md" data-reaudit>
       <fieldset class="stack-sm"><legend class="fld-label">When</legend>

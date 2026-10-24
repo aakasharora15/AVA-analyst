@@ -58,7 +58,7 @@ export default {
     <ol class="na-notes">
       <li class="card"><b>What happens next.</b><span class="muted">Six agents run in sequence. Code computes the score and directive; the Orchestrator writes the rationale last.</span></li>
       <li class="card"><b>How long.</b><span class="muted">A few minutes. You can leave and return.</span></li>
-      <li class="card"><b>Confidential.</b><span class="muted">[CONFIRM WITH LEGAL] Your submission is used only for this audit.</span></li>
+      <li class="card"><b>Confidential.</b><span class="muted">Your submission is used only for this audit, is visible only to your organisation and is never used to train AI models.</span></li>
     </ol>
   </aside>
 

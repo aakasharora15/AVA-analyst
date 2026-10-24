@@ -52,8 +52,8 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 - [ ] 5.1 Approve agent prompts (Owner plus second reviewer)
 - [ ] 5.2 Calibrate on 10 to 20 past deals with known outcomes
-- [ ] 5.3 Fill placeholders: [PRICE], [LIMIT], [SEATS], [RENEWAL DATE], [SALES EMAIL], team bios
-- [~] 5.4 Legal: privacy policy live at /privacy with no placeholders (AI provider clause, processors by category, retention 90 days after closure / free audits 12 months / records up to 6 years). Needs from owner: legal entity name, registered address, privacy email (LEGAL_ENTITY in src/screens/misc.js). Register with the ICO. Lawyer review recommended. Terms still to write
+- [~] 5.3 Site content is final with no visible placeholders (2026-10-24). Owner-only details are listed in OWNER_INPUTS.md and omitted from pages until supplied
+- [~] 5.4 Legal: Privacy policy, Terms of service and Trust centre are live with final wording (2026-10-24). Remaining: owner details, ICO registration, lawyer review (OWNER_INPUTS.md)
 - [ ] 5.5 Decide single sign-on for Enterprise at launch
 - [ ] 5.6 Google Auth Platform: complete Branding (home page, privacy, terms, authorised domain), then Publish app so anyone can use Continue with Google
 

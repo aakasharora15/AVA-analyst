@@ -1,20 +1,20 @@
 {
- "name": "Your Fund Name",
+ "name": "AVA Demo Fund",
  "kind": "VC fund",
- "plan": "Portfolio",
- "renewal": "[RENEWAL DATE]",
- "limit": "[LIMIT]",
- "seats": "[SEATS]",
+ "plan": "Pro Max",
+ "renewal": null,
+ "limit": null,
+ "seats": null,
  "cadence": {
   "mode": "quarterly",
   "day": 1
  },
  "alertThreshold": 5,
  "currency": "GBP",
- "retention": "[CONFIRM WITH LEGAL]",
+ "retention": "Deleted within 90 days of the account closing",
  "region": "United Kingdom",
  "branding": {
-  "coverName": "Your Fund Name",
+  "coverName": "AVA Demo Fund",
   "footer": "Confidential. Prepared for the investment committee.",
   "attribution": true
  },

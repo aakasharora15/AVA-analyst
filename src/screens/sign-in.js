@@ -15,7 +15,7 @@ const STATES = {
   reset: { title: 'Choose a new password.', body: PASSWORD_RULE },
   'reset-expired': { title: 'This reset link has expired.', body: 'Reset links last 1 hour. Request a new one to continue.', action: 'Send a new link' },
   'sso-not-configured': { title: 'Single sign-on is not set up for this domain.', body: 'Sign in with your email and password, or ask your organisation Owner to configure single sign-on (Enterprise plan).' },
-  'sso-error': { title: 'Single sign-on failed.', body: 'Your identity provider returned an error. Contact support with this reference: AVA-SSO-[REFERENCE].' },
+  'sso-error': { title: 'Single sign-on failed.', body: 'Your identity provider returned an error. Try again, or sign in with your email and password.' },
   'invite-expired': { title: 'This invite has expired.', body: 'Invites last 7 days. Ask the person who invited you to send a new one.' },
 };
 
@@ -52,7 +52,7 @@ function panel(ctx) {
       <div class="fld"><label for="s-pass">Password</label><input id="s-pass" type="password" class="inp" autocomplete="${isIn ? 'current-password' : 'new-password'}" value="${password}"${isIn ? '' : html` minlength="12" aria-describedby="s-pass-hint"`}>${isIn ? '' : html`<span class="hint" id="s-pass-hint">${PASSWORD_RULE}</span>`}</div>
       <span class="err" id="s-err" role="alert" data-err></span>
       <button type="submit" class="btn btn-primary btn-lg" data-submit>${isIn ? 'Sign in' : 'Create account'}</button>
-      ${isIn ? html`<a class="link small" href="/sign-in?state=forgot">Forgot password?</a>` : html`<p class="hint">[TERMS] and [PRIVACY] apply. We will send a link to verify your email.</p>`}
+      ${isIn ? html`<a class="link small" href="/sign-in?state=forgot">Forgot password?</a>` : html`<p class="hint">By creating an account you agree to our <a class="link" href="/terms">Terms</a> and <a class="link" href="/privacy">Privacy policy</a>. We will send a link to verify your email.</p>`}
     </form>
     ${isIn && !demoLogin ? html`<div class="card card-pad stack-sm si-demo" role="note">
       <b>Exploring AVA?</b>

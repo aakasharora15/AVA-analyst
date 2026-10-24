@@ -130,7 +130,7 @@ function trace(a) {
   return html`<section aria-labelledby="trace-title" class="card card-pad stack-md" id="trace">
   <div class="r-sec-head"><h2 id="trace-title" class="r-h2">How this score was built</h2><span class="small muted">Score, then category exposure, then the findings and their sources.</span></div>
   <ol class="trace-steps small">
-    <li><b>Exposure per category</b> is the sum of its findings: HIGH ${a.severityWeights.HIGH}, MEDIUM ${a.severityWeights.MEDIUM}, LOW ${a.severityWeights.LOW} points, capped at 100. <span class="lbl">[CALIBRATE]</span></li>
+    <li><b>Exposure per category</b> is the sum of its findings: HIGH ${a.severityWeights.HIGH}, MEDIUM ${a.severityWeights.MEDIUM}, LOW ${a.severityWeights.LOW} points, capped at 100.</li>
     <li><b>Weighted exposure</b> uses ${TYPE_LABEL[a.company.type].toLowerCase()} weights. 100 minus it gives <b>${a.raw}</b>.</li>
     <li><b>Cap rule:</b> ${a.cap ? html`${a.cap.category} exposure ${a.cap.exposure} is above the threshold, so the score is limited to <b>${a.cap.limit}</b>.` : 'no category is above the threshold, so no cap applied.'}</li>
     <li><b>Directive:</b> ${a.score} maps to ${verdictTag(a.baseDirective)}${a.overridden ? html`, adjusted by the Orchestrator to ${verdictTag(a.finalDirective)}` : ''}${a.status === 'partial' ? ', then the Partial cap at HOLD' : ''}. Final: ${verdictTag(a.finalDirective)}.</li>

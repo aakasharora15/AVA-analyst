@@ -3,16 +3,8 @@ import { SAMPLE_REPORT_PATH } from '../config.js';
 import { DEMO_EMAIL, DEMO_PASSWORD } from '../data/repo.js';
 
 // Illustrative content only. Client marks are placeholders, not real clients.
-const CLIENT_MARKS = [
-  { name: 'NORTHGATE', style: 'font-weight:800;letter-spacing:.18em;font-size:1.25rem' },
-  { name: 'harbourline', style: 'font-weight:700;letter-spacing:-0.04em;font-size:1.75rem' },
-  { name: 'Kestrel & Co', style: "font-family:var(--font-mark);font-size:1.75rem" },
-  { name: 'LUMEN.', style: 'font-weight:800;letter-spacing:.04em;font-size:1.625rem' },
-  { name: 'oakfield capital', style: 'font-weight:600;letter-spacing:-0.03em;font-size:1.5rem' },
-  { name: 'STRATUS', style: 'font-family:var(--font-mono);font-weight:600;letter-spacing:.14em;font-size:1.25rem' },
-  { name: 'Ferrant', style: 'font-family:var(--font-mark);font-style:italic;font-size:1.875rem' },
-  { name: 'meridian', style: 'font-weight:800;letter-spacing:-0.05em;font-size:1.875rem' },
-];
+// Who AVA is built for. Real client marks replace this once clients agree to be named.
+const AUDIENCES = ['Venture funds', 'Corporate venture teams', 'Accelerators', 'Founders', 'Strategy teams', 'Innovation programmes', 'Angel investors', 'Business schools'];
 
 const AGENTS = [
   { name: 'The Saboteur', role: 'Internal failure', sev: 'HIGH', finding: 'Route density has fallen to 11 stops per run and driver cost per stop is above sector norms.' },
@@ -48,7 +40,7 @@ const FAQ = [
   { q: 'What does the score mean?', a: 'It runs from 0 to 100, and higher is better. It is built to be honest, not encouraging: a high score is reserved for genuinely defensible businesses.' },
   { q: 'Can I export a report?', a: 'Yes. Download a branded PDF with a cover, venture details, score, key findings and the full analysis, or copy the report as text.' },
   { q: 'How long does an audit take?', a: 'A few minutes. Results appear agent by agent, and the audit keeps running if you leave the page.' },
-  { q: 'Is my submission confidential?', a: '[CONFIRM WITH LEGAL] Your submission is used to produce your audit. Final wording on data handling to be supplied before launch.' },
+  { q: 'Is my submission confidential?', a: 'Yes. What you submit is used only to produce your audit and is visible only to your organisation and anyone you choose to share a report with. It is processed by a third-party AI model provider under a data processing agreement and is never used to train AI models. See our privacy policy for details.' },
 ];
 
 const SEV_CLASS = { HIGH: 'sev-high', MEDIUM: 'sev-medium', LOW: 'sev-low' };
@@ -106,7 +98,7 @@ export default {
   render() {
     const active = 1;
     const cur = AGENTS[active];
-    const markSet = (hidden) => html`<div class="marq-set"${hidden ? html` aria-hidden="true"` : ''}>${CLIENT_MARKS.map((m) => html`<span class="logo-i" style="${m.style}">${m.name}</span>`)}</div>`;
+    const markSet = (hidden) => html`<div class="marq-set"${hidden ? html` aria-hidden="true"` : ''}>${AUDIENCES.map((a) => html`<span class="logo-i l-aud">${a}</span>`)}</div>`;
 
     return html`
 <section class="l-hero" aria-labelledby="hero-title">
@@ -128,8 +120,8 @@ export default {
   </div>
 </section>
 
-<section class="l-clients" aria-label="Clients">
-  <span class="lbl">Trusted by funds, studios and corporate teams · placeholder marks</span>
+<section class="l-clients" aria-label="Who AVA is for">
+  <span class="lbl">Built for</span>
   <div class="marq"><div class="marq-t">${markSet(false)}${markSet(true)}</div></div>
 </section>
 
