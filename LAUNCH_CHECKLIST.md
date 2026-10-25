@@ -31,7 +31,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] 2.1 Add environment variables: 5 Config + 3 Secret, Production and Preview (2026-10-24)
 - [x] 2.2 Production branch: claude/design-implementation-0z8bwt is the repository's only branch, so Vercel production already builds from it (2026-10-24)
 - [x] 2.3 Deploy; https://ava-analyst.vercel.app/api/health returns ok: database, Anthropic key, auth verification and cron secret all true (2026-10-24)
-- [ ] 2.4 Custom domain and HTTPS
+- [x] 2.4 Custom domain and HTTPS (2026-10-25): avaverdict.com serves production; www, avaverdict.co.uk and avaverdict.co.in (and their www) 308 to it. APP_URL=https://avaverdict.com; Supabase Site URL and redirect URLs updated; Google sign-in tested on the new domain
 
 ## Stage 3. Background jobs and email
 
