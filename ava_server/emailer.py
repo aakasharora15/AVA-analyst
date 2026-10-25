@@ -41,7 +41,7 @@ def send_pending(limit: int = 50) -> dict:
                 res = httpx.post("https://api.resend.com/emails", timeout=15.0,
                                  headers={"Authorization": f"Bearer {s.resend_api_key}"},
                                  json={"from": s.email_from, "to": [r["to_email"]], "subject": r["subject"],
-                                       "text": r["body"], "html": email_html.render(r["subject"], r["body"])})
+                                       "text": r["body"], "html": email_html.render(r["subject"], r["body"], r["kind"])})
                 res.raise_for_status()
                 c.execute("update email_outbox set sent_at = now(), error = null where id = %s", (r["id"],))
                 sent += 1

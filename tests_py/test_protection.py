@@ -84,7 +84,15 @@ def test_emails_are_sent_as_branded_html_with_text_fallback(api, monkeypatch):
                              "Manage alert settings: https://avaverdict.com/alerts\n")
     assert '<a href="https://avaverdict.com/invite/abc"' in page and "Accept invitation" in page
     assert "&lt;script&gt;" in page and "<script>" not in page
-    assert "/icons/email-wordmark.png" in page and "Manage alert settings" in page
+    assert "/icons/email/hero.png" in page and "/icons/email/icon-report.png" in page and "Manage alert settings" in page
+    invite = email_html.render("Aakash invited you to DZ on AVA", "Accept: https://avaverdict.com/invite/abc", "invite")
+    assert "icon-invite.png" in invite and "INVITATION" in invite and "Sign in with Google" in invite
+    report = email_html.render("Acme: audit complete, HOLD 47", "Open the report: https://x.example/r", "audit-complete")
+    assert "RESILIENCE SCORE" in report and ">47<" in report and 'width="47%"' in report and "#F2C46A" in report
+    alert = email_html.render("Acme: directive changed from PROCEED to PIVOT", "Score 70 to 41.", "alert-immediate")
+    assert "&rarr;" in alert and ">PROCEED<" in alert and ">PIVOT<" in alert and "RESILIENCE SCORE" not in alert
+    plain = email_html.render("Update Acme's March numbers", "KILL 3 items", "metrics")
+    assert "RESILIENCE SCORE" not in plain and "MONTHLY NUMBERS" in plain
     monkeypatch.setenv("RESEND_API_KEY", "re_test")
     with db.system() as c:
         c.execute("delete from email_outbox where sent_at is null")
