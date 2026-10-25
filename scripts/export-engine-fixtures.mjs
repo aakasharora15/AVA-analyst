@@ -23,9 +23,18 @@ const synthetic = [
   { name: 'failed', type: 'startup', status: 'failed', findings: [f('k', 'Market', 'LOW')] },
 ];
 
+const repeats = [
+  // The same risk written up three times, and a pile of MEDIUMs: the decay method must not let volume dominate.
+  { name: 'repeat-topic', type: 'startup', status: 'complete', findings: [f('r1', 'Financial', 'HIGH', { matchKey: '1:Financial:runway' }), f('r2', 'Financial', 'MEDIUM', { matchKey: '4:Financial:runway' }), f('r3', 'Financial', 'HIGH', { matchKey: '5:Financial:runway' })] },
+  { name: 'many-medium', type: 'startup', status: 'complete', findings: Array.from({ length: 9 }, (_, i) => f(`m${i}`, 'Regulatory', 'MEDIUM', { matchKey: `5:Regulatory:t${i}` })) },
+  { name: 'three-high-cap', type: 'startup', status: 'complete', findings: [0, 1, 2].map((i) => f(`h${i}`, 'Competition', 'HIGH', { matchKey: `2:Competition:h${i}` })) },
+];
 const scoreCases = [
   ...audits.map((a) => ({ name: a.id, type: typeOf(a.companyId), status: a.status, override: a.override, calibration: a.calibrationVersion, findings: a.findings })),
   ...synthetic.map((s) => ({ calibration: 'cal-2026.2', ...s })),
+  // Every case again under the proposed decay calibration.
+  ...audits.map((a) => ({ name: `${a.id}@decay`, type: typeOf(a.companyId), status: a.status, override: a.override, calibration: 'cal-2026.3', findings: a.findings })),
+  ...[...synthetic, ...repeats].map((s) => ({ ...s, name: `${s.name}@decay`, calibration: 'cal-2026.3' })),
 ].map((c) => {
   const cal = CALIBRATIONS[c.calibration];
   return {

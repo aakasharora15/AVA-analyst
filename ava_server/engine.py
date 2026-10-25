@@ -22,7 +22,38 @@ def snap(x: float) -> float:
     return js_round(x * 1e6) / 1e6
 
 
+def _topic(f: dict) -> str:
+    """The topic a finding is about, for merging repeats: the last part of its match key."""
+    k = f.get("matchKey") or ""
+    return k.rsplit(":", 1)[1] if ":" in k else (k or f.get("id"))
+
+
+def _decay_exposure(findings: Iterable[dict], cal: dict) -> dict:
+    """Each category is driven by its most severe distinct risks: findings on
+    the same topic count once, at their highest severity; the worst counts in
+    full and each further one half as much as the last."""
+    by_category: dict[str, dict] = {c: {} for c in CATEGORIES}
+    for f in findings:
+        if f.get("category") not in by_category:
+            continue
+        w = cal["severityWeights"].get(f.get("severity"), 0)
+        topics = by_category[f["category"]]
+        t = _topic(f)
+        if t not in topics or topics[t] < w:
+            topics[t] = w
+    exposure = {}
+    for c in CATEGORIES:
+        ws = sorted(by_category[c].values(), reverse=True)
+        total = 0.0
+        for i, w in enumerate(ws):  # same order and accumulation as the JS reduce
+            total += w * cal["decay"] ** i
+        exposure[c] = min(100, js_round(snap(total)))
+    return exposure
+
+
 def category_exposure(findings: Iterable[dict], cal: dict = CALIBRATION) -> dict:
+    if cal.get("method") == "decay":
+        return _decay_exposure(findings, cal)
     exposure = {c: 0 for c in CATEGORIES}
     for f in findings:
         if f.get("category") in exposure:

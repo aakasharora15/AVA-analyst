@@ -7,8 +7,37 @@ const round = (n) => Math.round(n);
 // Snap to 6 decimals so float noise can never decide a .5 rounding tie.
 const snap = (n) => Math.round(n * 1e6) / 1e6;
 
+/** The topic a finding is about, for merging repeats: the last part of its match key. */
+const topicOf = (f) => {
+  const k = f.matchKey || '';
+  const i = k.lastIndexOf(':');
+  return i >= 0 ? k.slice(i + 1) : (k || f.id);
+};
+
+// 'decay' calibrations: each category is driven by its most severe distinct
+// risks. Findings on the same topic count once, at their highest severity;
+// the worst counts in full and each further one half as much as the last.
+function decayExposure(findings, cal) {
+  const byCategory = Object.fromEntries(CATEGORIES.map((c) => [c, new Map()]));
+  for (const f of findings) {
+    if (!(f.category in byCategory)) continue;
+    const w = cal.severityWeights[f.severity] || 0;
+    const topics = byCategory[f.category];
+    const t = topicOf(f);
+    if (!topics.has(t) || topics.get(t) < w) topics.set(t, w);
+  }
+  const exposure = {};
+  for (const c of CATEGORIES) {
+    const ws = [...byCategory[c].values()].sort((a, b) => b - a);
+    const total = ws.reduce((sum, w, i) => sum + w * cal.decay ** i, 0);
+    exposure[c] = Math.min(100, round(snap(total)));
+  }
+  return exposure;
+}
+
 /** Exposure per category, 0 to 100, higher is worse. */
 export function categoryExposure(findings, cal = CALIBRATION) {
+  if (cal.method === 'decay') return decayExposure(findings, cal);
   const exposure = Object.fromEntries(CATEGORIES.map((c) => [c, 0]));
   for (const f of findings) {
     if (!(f.category in exposure)) continue;
