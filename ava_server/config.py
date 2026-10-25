@@ -51,10 +51,28 @@ class Settings:
         self.database_url = env("DATABASE_URL", "")
         self.supabase_url = env("SUPABASE_URL", "")
         self.supabase_jwt_secret = env("SUPABASE_JWT_SECRET", "")
+        # Optional: lets account deletion remove data-room files directly.
+        self.supabase_service_key = env("SUPABASE_SERVICE_ROLE_KEY", "").strip()
         self.cron_secret = env("CRON_SECRET", "").strip()  # copied values often carry a stray newline
         self.app_url = env("APP_URL", "http://localhost:5173")
         self.email_from = env("EMAIL_FROM", "AVA <alerts@example.com>")
         self.resend_api_key = env("RESEND_API_KEY", "")
+        # Billing (Stripe). Off until the key, webhook secret and prices are set.
+        self.stripe_secret_key = env("STRIPE_SECRET_KEY", "").strip()
+        self.stripe_webhook_secret = env("STRIPE_WEBHOOK_SECRET", "").strip()
+        self.stripe_prices = {
+            "basic": env("STRIPE_PRICE_BASIC", "").strip(),
+            "pro": env("STRIPE_PRICE_PRO", "").strip(),
+            "pro-max": env("STRIPE_PRICE_PRO_MAX", "").strip(),
+        }
+        # Bot check on public forms (Cloudflare Turnstile). Off until set.
+        self.turnstile_secret = env("TURNSTILE_SECRET_KEY", "").strip()
+        # Free audit spend limits: per network address per day, and in total per day.
+        self.free_audits_per_ip_day = int(env("AVA_FREE_AUDITS_PER_IP_DAY", "2"))
+        self.free_audits_per_day = int(env("AVA_FREE_AUDITS_PER_DAY", "50"))
+        # Error reporting (Sentry) and where operational alerts go.
+        self.sentry_dsn = env("SENTRY_DSN", "").strip()
+        self.ops_email = env("AVA_OPS_EMAIL", "").strip()
         self.free_email_domains = set(
             d.strip() for d in env(
                 "AVA_FREE_EMAIL_DOMAINS",

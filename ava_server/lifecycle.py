@@ -314,6 +314,14 @@ def finalise(audit_id: str) -> None:
         if update.get("drift_flag"):
             c.execute("insert into audit_log (org_id, who, action, object_type, object_id, detail) values (%s, 'AVA', 'audit.drift', 'audits', %s, %s)",
                       (a["org_id"], audit_id, "Drift flag: score differs from an earlier audit with an identical input snapshot"))
+        # Operations alert: an audit that failed for a technical reason (not a
+        # declined, thin input) is something the team should see before the client does.
+        ops = settings().ops_email
+        if ops and st == "failed" and not insufficient and a["trigger"] != "shadow":
+            reasons = "; ".join(f"agent {n}: {runs[n].get('error_reason') or 'no reason recorded'}" for n in sorted(failed)) or "unknown"
+            emailer.queue(c, None, ops, f"AVA ops: audit failed for {org['name']}",
+                          f"Audit {audit_id} for {company['title']} ({org['name']}, plan {org['plan']}) failed.\n\n{reasons}\n\n"
+                          "It was not counted against the client's allowance.", "ops")
 
     if a["trigger"] == "shadow":
         from .drift import record_shadow_result

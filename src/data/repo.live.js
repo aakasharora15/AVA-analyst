@@ -756,7 +756,9 @@ export async function sendFreeAudit(id, to) { await api(`/free-audit/${id}/send`
 export async function getAuditLog() {
   const { org } = await need();
   return (await rows(sb.from('audit_log').select('*').eq('org_id', org.id).order('at', { ascending: false }).limit(500)))
-    .map((e) => ({ at: e.at, who: e.who, action: e.action, object: e.object_type, objectId: e.object_id, detail: e.detail }));
+    // Share and invite entries are keyed by their token: show a stub, never a working link.
+    .map((e) => ({ at: e.at, who: e.who, action: e.action, object: e.object_type,
+      objectId: ['share_links', 'invites'].includes(e.object_type) && e.object_id ? `${String(e.object_id).slice(0, 4)}…` : e.object_id, detail: e.detail }));
 }
 
 export async function recordExport(auditId, detail) {

@@ -26,11 +26,18 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import db, drift, emailer, lifecycle, scheduling
+from . import billing, db, drift, emailer, lifecycle, privacy, scheduling
 from .plans import AllowanceReached, trial_end
 from .quality import input_problem
 from .auth import cron_guard, current_user
 from .config import DEEP_AUDIT_PLANS, PLANS, plan_id, settings
+
+if settings().sentry_dsn:
+    # Error reporting. Request bodies and personal data are never sent: they can
+    # hold data-room text and client details.
+    import sentry_sdk
+    sentry_sdk.init(dsn=settings().sentry_dsn, send_default_pii=False, max_request_body_size="never",
+                    traces_sample_rate=0.0, environment=os.environ.get("VERCEL_ENV", "development"))
 
 app = FastAPI(title="AVA API", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -109,6 +116,9 @@ def health():
         "auth_verification": bool(s.supabase_jwt_secret or s.supabase_url),
         "cron_secret": bool(s.cron_secret),
         "email_provider": bool(s.resend_api_key),
+        "billing": billing.available(),
+        "bot_check": bool(s.turnstile_secret),
+        "error_reporting": bool(s.sentry_dsn),
     }
     try:
         with db.system() as c:
@@ -649,6 +659,113 @@ def create_org(body: OrgIn, user: str = Depends(current_user)):
 
 
 # ---------------------------------------------------------------------------
+# Billing (Stripe). Owners buy and manage plans; the signed webhook is the
+# only thing that changes an organisation's plan.
+
+
+def _billing_org(user: str, org_id: str) -> dict:
+    _need(user, org_id, ("Owner",))
+    with db.system() as c:
+        return c.execute("select * from organisations where id = %s", (org_id,)).fetchone()
+
+
+@app.get("/api/billing/{org_id}")
+def billing_status(org_id: str, user: str = Depends(current_user)):
+    _need(user, org_id, MEMBERS)
+    with db.system() as c:
+        o = c.execute("select plan, subscription_status, current_period_end, cancel_at_period_end, stripe_customer_id "
+                      "from organisations where id = %s", (org_id,)).fetchone()
+    return {"online": billing.available(), "plans": sorted(billing.prices()), "plan": plan_id(o["plan"]),
+            "status": o["subscription_status"], "periodEnd": o["current_period_end"].isoformat() if o["current_period_end"] else None,
+            "cancelAtPeriodEnd": o["cancel_at_period_end"], "manageable": bool(o["stripe_customer_id"])}
+
+
+class CheckoutIn(BaseModel):
+    plan: str = Field(pattern="^(basic|pro|pro-max)$")
+
+
+@app.post("/api/billing/{org_id}/checkout")
+def billing_checkout(org_id: str, body: CheckoutIn, user: str = Depends(current_user)):
+    if not billing.available():
+        raise HTTPException(503, "Online checkout is not available yet. Contact us to choose a plan.")
+    org = _billing_org(user, org_id)
+    if org["subscription_status"] in billing.LIVE_STATUSES:
+        # Changing plan on a live subscription happens in the portal, so proration is Stripe's.
+        return {"url": billing.portal_url(org)}
+    with db.system() as c:
+        email = c.execute("select email from auth.users where id = %s", (user,)).fetchone()["email"]
+    return {"url": billing.checkout_url(org, body.plan, email)}
+
+
+@app.post("/api/billing/{org_id}/portal")
+def billing_portal(org_id: str, user: str = Depends(current_user)):
+    if not billing.available():
+        raise HTTPException(503, "Online billing is not available yet. Contact us.")
+    return {"url": billing.portal_url(_billing_org(user, org_id))}
+
+
+@app.post("/api/stripe/webhook")
+async def stripe_webhook(request: Request):
+    secret = settings().stripe_webhook_secret
+    if not secret:
+        raise HTTPException(503, "Billing is not configured")
+    payload = await request.body()
+    try:
+        billing.verify(payload, request.headers.get("stripe-signature", ""), secret)
+    except billing.BillingError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    import json
+    return {"received": True, "result": billing.handle(json.loads(payload))}
+
+
+@app.exception_handler(billing.BillingError)
+async def _billing_error(_: Request, exc: billing.BillingError):
+    return JSONResponse({"error": str(exc)}, status_code=502)
+
+
+# ---------------------------------------------------------------------------
+# Your data: export and deletion (privacy policy, UK GDPR).
+
+
+@app.exception_handler(privacy.DeletionBlocked)
+async def _deletion_blocked(_: Request, exc: privacy.DeletionBlocked):
+    return JSONResponse({"error": str(exc)}, status_code=409)
+
+
+@app.get("/api/orgs/{org_id}/export")
+def export_org(org_id: str, user: str = Depends(current_user)):
+    _need(user, org_id, MANAGERS)
+    data = privacy.export_org(org_id)
+    with db.system(_name(user)) as c:
+        c.execute("insert into audit_log (org_id, user_id, who, action, object_type, object_id, detail) "
+                  "values (%s, %s, %s, 'org.exported', 'organisations', %s, 'Full data export downloaded')",
+                  (org_id, user, _name(user), org_id))
+    return data
+
+
+class ConfirmIn(BaseModel):
+    confirm: str = ""
+
+
+@app.delete("/api/orgs/{org_id}")
+def delete_org(org_id: str, body: ConfirmIn, user: str = Depends(current_user)):
+    _need(user, org_id, ("Owner",))
+    with db.system() as c:
+        name = c.execute("select name from organisations where id = %s", (org_id,)).fetchone()["name"]
+    if body.confirm.strip().lower() != name.strip().lower():
+        raise HTTPException(422, "Type the organisation's name exactly to confirm")
+    return {"ok": True, "files": privacy.delete_org(org_id)}
+
+
+@app.delete("/api/me")
+def delete_me(body: ConfirmIn, user: str = Depends(current_user)):
+    if body.confirm.strip().upper() != "DELETE":
+        raise HTTPException(422, "Type DELETE to confirm")
+    privacy.delete_user(user)
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
 # Data room (spec 4.2). The browser uploads the file to Supabase Storage under
 # {org_id}/{company_id}/..., extracts text where it can (PDF, DOCX, CSV, text),
 # then registers it here as a source.
@@ -705,10 +822,48 @@ _EMAIL = re.compile(r"^[^@\s]+@([^@\s]+\.[^@\s]+)$")
 class FreeIn(BaseModel):
     email: str
     company: CompanyIn
+    turnstileToken: str = ""
+
+
+def _client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "")
+    return (fwd.split(",")[0].strip() or request.headers.get("x-real-ip", "") or (request.client.host if request.client else "")) or "unknown"
+
+
+def _ip_hash(ip: str) -> str:
+    """Salted, so the stored value cannot be reversed to an address."""
+    return hmac.new((settings().cron_secret or "ava").encode(), ip.encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def _human_check(token: str, ip: str) -> None:
+    secret = settings().turnstile_secret
+    if not secret:
+        return
+    if not token:
+        raise HTTPException(422, "Complete the check that you are human, then try again.")
+    import httpx
+    try:
+        r = httpx.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", timeout=10.0,
+                       data={"secret": secret, "response": token, "remoteip": ip}).json()
+    except (httpx.HTTPError, ValueError):
+        raise HTTPException(503, "We could not run the human check. Try again in a minute.") from None
+    if not r.get("success"):
+        raise HTTPException(422, "The human check did not pass. Refresh the page and try again.")
 
 
 @app.post("/api/free-audit")
-def free_audit(body: FreeIn):
+def free_audit(body: FreeIn, request: Request):
+    ip = _client_ip(request)
+    _human_check(body.turnstileToken, ip)
+    ip_hash = _ip_hash(ip)
+    s = settings()
+    with db.system() as c:
+        today = c.execute("select count(*) filter (where ip_hash = %s) as mine, count(*) as total from free_audits "
+                          "where created_at > now() - interval '1 day'", (ip_hash,)).fetchone()
+    if today["mine"] >= s.free_audits_per_ip_day:
+        raise HTTPException(429, "You have reached today's free audit limit. Start a free trial to keep going.")
+    if today["total"] >= s.free_audits_per_day:
+        raise HTTPException(429, "Free audits are paused for the rest of today. Start a free trial instead.")
     m = _EMAIL.match(body.email.strip().lower())
     if not m:
         raise HTTPException(422, "Enter a valid work email")
@@ -732,8 +887,8 @@ def free_audit(body: FreeIn):
              co.industry, co.country, co.city, co.model, co.target, co.type)).fetchone()["id"]
     audit_id = lifecycle.create_audit(None, cid, trigger="manual")
     with db.system("Free audit") as c:
-        fid = c.execute("insert into free_audits (email, domain, inputs, audit_id) values (%s, %s, %s, %s) returning id",
-                        (body.email.strip().lower(), domain, db.jsonb(body.company.model_dump()), audit_id)).fetchone()["id"]
+        fid = c.execute("insert into free_audits (email, domain, inputs, audit_id, ip_hash) values (%s, %s, %s, %s, %s) returning id",
+                        (body.email.strip().lower(), domain, db.jsonb(body.company.model_dump()), audit_id, ip_hash)).fetchone()["id"]
     return {"id": fid}
 
 

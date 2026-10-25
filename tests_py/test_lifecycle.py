@@ -78,13 +78,17 @@ def test_agent_failing_twice_gives_partial_capped_at_hold(company):
     assert a["counted_against_usage"] is True
 
 
-def test_orchestrator_failure_fails_the_audit(company):
+def test_orchestrator_failure_fails_the_audit(company, monkeypatch):
+    monkeypatch.setenv("AVA_OPS_EMAIL", "ops@ava.example")
     aid = create_audit(company["users"]["Analyst"], company["company"])
     st = run_to_end(aid, runner({6: ["malformed", "malformed"]}))
     a = audit_row(aid)
     assert st["audit"]["status"] == "failed"
     assert a["score"] is None and a["final_directive"] is None
     assert a["counted_against_usage"] is False
+    with db.system() as c:
+        ops = c.execute("select subject, body from email_outbox where kind = 'ops' and body like %s", (f"%{aid}%",)).fetchone()
+    assert ops and "failed" in ops["subject"] and "agent 6" in ops["body"]
 
 
 def _override(to):

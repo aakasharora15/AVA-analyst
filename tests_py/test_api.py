@@ -21,6 +21,8 @@ def api(world, monkeypatch):
     monkeypatch.setenv("SUPABASE_JWT_SECRET", SECRET)
     monkeypatch.setenv("CRON_SECRET", "cron-secret")
     monkeypatch.setenv("AVA_FREE_EMAIL_DOMAINS", "gmail.com")
+    monkeypatch.setenv("AVA_FREE_AUDITS_PER_IP_DAY", "1000")
+    monkeypatch.setenv("AVA_FREE_AUDITS_PER_DAY", "1000")
 
     def fake_runner(*_a, **_k):
         cfg = Settings()

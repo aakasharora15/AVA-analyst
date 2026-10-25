@@ -44,6 +44,8 @@ def check_allowance(c, org: dict) -> None:
     pid = plan_id(org.get("plan"))
     plan = PLANS[pid]
     if pid == "trial" and org.get("trial_ends_at") and _now() > org["trial_ends_at"]:
+        if org.get("subscription_status") in ("canceled", "unpaid", "incomplete_expired"):
+            raise AllowanceReached("Your subscription has ended. Choose a plan to keep running audits. Your reports are kept.")
         raise AllowanceReached("Your free trial has ended. Choose a plan to keep running audits.")
     limit = plan["audits"]
     if limit is not None and audits_used(c, org) >= limit:
