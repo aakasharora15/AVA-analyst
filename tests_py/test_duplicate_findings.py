@@ -5,6 +5,7 @@ additive calibration (cal-2026.2) is shown for contrast."""
 
 from ava_server.config import CALIBRATIONS
 from ava_server.engine import score_audit
+from tests_py.test_api import api  # noqa: F401 - fixture
 
 DECAY = CALIBRATIONS["cal-2026.3"]
 ADDITIVE = CALIBRATIONS["cal-2026.2"]
@@ -53,3 +54,41 @@ def test_a_new_topic_still_counts():
 def test_the_live_additive_formula_is_moved_by_repeats():
     # Why Phase 2 exists: the same issues said twice lower the live score materially.
     assert score(BASE, ADDITIVE) - score(BASE + REPEATS, ADDITIVE) > 2
+
+
+def test_a_repeat_run_sees_the_public_sources_the_original_found(api):  # noqa: F811
+    from ava_server import db, drift
+    from tests_py.test_api import as_, finish
+    client, w = api
+    aid = client.post("/api/audits", json={"companyId": w["company"]}, headers=as_(w, "Analyst")).json()["auditId"]
+    finish(client, as_(w, "Analyst"), aid)
+    with db.system() as c:
+        sid = c.execute("insert into sources (org_id, company_id, audit_id, type, title, note) values (%s, %s, %s, 'public', 'Found', 'x') returning id",
+                        (w["org"], w["company"], aid)).fetchone()["id"]
+    shadow = drift.create_shadow(aid, "recalibration")
+    with db.system() as c:
+        assert sid in c.execute("select source_ids from audits where id = %s", (shadow,)).fetchone()["source_ids"]
+
+
+def test_repeat_sql_queues_repeats_that_finish_and_report(api):  # noqa: F811
+    from pathlib import Path
+
+    from ava_server import db, lifecycle
+    from tests_py.test_api import as_, finish
+    client, w = api
+    aid = client.post("/api/audits", json={"companyId": w["company"]}, headers=as_(w, "Analyst")).json()["auditId"]
+    finish(client, as_(w, "Analyst"), aid)
+    root = Path(__file__).resolve().parent.parent / "supabase" / "checks"
+    start = (root / "repeat_start.sql").read_text().replace("'AVA Verdict%'", "'%'").replace("1 as repeats", "2 as repeats")
+    with db.system() as c:
+        c.execute(start)
+        ids = [r["id"] for r in c.execute("select id from audits where trigger = 'shadow' and run_state ->> 'shadowOf' = %s", (aid,)).fetchall()]
+    assert len(ids) == 2
+    for sid in ids:
+        for _ in range(20):
+            if lifecycle.advance(sid)["audit"]["status"] in ("complete", "partial", "failed"):
+                break
+    with db.system() as c:
+        rows = c.execute((root / "repeat_results.sql").read_text()).fetchall()
+    assert [r["run"] for r in rows if r["status"] == "complete"].count("repeat") == 2
+    assert any(r["run"] == "original" for r in rows)

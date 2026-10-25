@@ -23,10 +23,14 @@ def create_shadow(original_id: str, purpose: str) -> str:
     s = settings()
     with db.system() as c:
         o = c.execute("select * from audits where id = %s", (original_id,)).fetchone()
+        # The frozen evidence is what the original saw: its snapshot sources plus
+        # the public sources its agents found during the run.
+        found = [r["id"] for r in c.execute("select id from sources where audit_id = %s order by created_at", (original_id,)).fetchall()]
+        source_ids = list(dict.fromkeys([*(o["source_ids"] or []), *found]))
         sid = c.execute(
             "insert into audits (org_id, company_id, trigger, depth, status, input_snapshot, snapshot_hash, source_ids, model_version, prompt_version, "
             "calibration_version, run_state) values (%s, %s, 'shadow', %s, 'queued', %s, %s, %s, %s, %s, %s, %s) returning id",
-            (o["org_id"], o["company_id"], o["depth"], db.jsonb(o["input_snapshot"]), o["snapshot_hash"], o["source_ids"], model_for(o["depth"], s), s.prompt_version,
+            (o["org_id"], o["company_id"], o["depth"], db.jsonb(o["input_snapshot"]), o["snapshot_hash"], source_ids, model_for(o["depth"], s), s.prompt_version,
              CALIBRATION["version"], db.jsonb({"shadowOf": original_id, "purpose": purpose}))).fetchone()["id"]
         for a in AGENTS:
             c.execute("insert into agent_runs (audit_id, org_id, agent) values (%s, %s, %s)", (sid, o["org_id"], a["n"]))
