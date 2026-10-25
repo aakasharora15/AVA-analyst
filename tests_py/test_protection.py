@@ -82,7 +82,7 @@ def test_emails_are_sent_as_branded_html_with_text_fallback(api, monkeypatch):
     page = email_html.render("Aakash invited you to DZ on AVA", "Aakash invited you to join DZ on AVA as Viewer <script>.\n\n"
                              "Accept: https://avaverdict.com/invite/abc\n\nThe invitation expires in 7 days.\n\n--\n"
                              "Manage alert settings: https://avaverdict.com/alerts\n")
-    assert '<a href="https://avaverdict.com/invite/abc"' in page and "Accept invitation" in page
+    assert 'href="https://avaverdict.com/invite/abc"' in page and "Accept invitation" in page
     assert "&lt;script&gt;" in page and "<script>" not in page
     assert "/icons/email/hero.png" in page and "/icons/email/icon-report.png" in page and "Manage alert settings" in page
     invite = email_html.render("Aakash invited you to DZ on AVA", "Accept: https://avaverdict.com/invite/abc", "invite")
@@ -91,6 +91,9 @@ def test_emails_are_sent_as_branded_html_with_text_fallback(api, monkeypatch):
     assert "RESILIENCE SCORE" in report and ">47<" in report and 'width="47%"' in report and "#F2C46A" in report
     alert = email_html.render("Acme: directive changed from PROCEED to PIVOT", "Score 70 to 41.", "alert-immediate")
     assert "&rarr;" in alert and ">PROCEED<" in alert and ">PIVOT<" in alert and "RESILIENCE SCORE" not in alert
+    # Light by default; dark-mode clients swap palette and images.
+    assert "hero-light.png" in report and "prefers-color-scheme: dark" in report and 'class="vHOLD"' in report
+    assert "#A16207" in report and "[data-ogsc] .card" in report
     plain = email_html.render("Update Acme's March numbers", "KILL 3 items", "metrics")
     assert "RESILIENCE SCORE" not in plain and "MONTHLY NUMBERS" in plain
     monkeypatch.setenv("RESEND_API_KEY", "re_test")
