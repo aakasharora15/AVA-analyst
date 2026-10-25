@@ -107,6 +107,9 @@ select.inp { appearance: none; background-image: linear-gradient(45deg, transpar
 .check-copy { display: flex; flex-direction: column; }
 fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 legend { padding: 0; }
+/* Legends sit outside flex gap, so stacks space them explicitly. */
+.stack-sm > legend { margin-bottom: .5rem; }
+.stack-md > legend { margin-bottom: 1rem; }
 .form-alert { border-radius: 16px; padding: 1rem 1.375rem; background: var(--kill-bg); display: flex; flex-direction: column; gap: .125rem; }
 .form-alert b { color: var(--kill); }
 
