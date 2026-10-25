@@ -1,5 +1,6 @@
 import { html } from '../lib/html.js';
 import { checkWorkEmail, runFreeAudit, sendFreeAudit } from '../data/repo.js';
+import { humanCheckOn, mountHumanCheck } from '../lib/turnstile.js';
 import { inputProblem } from '../data/shared.js';
 import { BUSINESS, contactHref } from '../content/business.js';
 import { AGENTS } from '../engine/config.js';
@@ -60,6 +61,7 @@ export default {
         <div class="fld"><label for="fa-cty">Country</label><input id="fa-cty" name="country" class="inp" autocomplete="country-name" aria-describedby="fa-e-country"><span class="err" id="fa-e-country" data-e="country"></span></div>
       </div>
       <div class="fld"><label for="fa-mail">Work email</label><input id="fa-mail" name="email" type="email" class="inp" autocomplete="email" aria-describedby="fa-e-email fa-mail-h"><span class="err" id="fa-e-email" data-e="email"></span><span class="hint" id="fa-mail-h">We send your result here. Free email addresses are not accepted.</span></div>
+      ${humanCheckOn ? html`<div class="fld"><div class="fa-human" data-human></div><span class="err" data-e-human role="alert"></span></div>` : ''}
       <button type="submit" class="btn btn-primary btn-lg">Run free audit</button>
       <p class="hint">Your submission is used only to produce this audit and is never used to train AI models. <a class="link" href="/privacy">Privacy policy</a></p>
     </form>
@@ -76,6 +78,11 @@ export default {
     const out = root.querySelector('[data-result]');
     let tried = false;
     let result = null;
+    const human = mountHumanCheck(root.querySelector('[data-human]')).catch((err) => {
+      const e = root.querySelector('[data-e-human]');
+      if (e) e.textContent = err.message;
+      return null;
+    });
     const errs = (v) => {
       const mail = checkWorkEmail(v.email || '');
       return {
@@ -102,6 +109,12 @@ export default {
       tried = true;
       const { v, bad } = show();
       if (bad.length) { form.elements[bad[0][0]].focus(); return; }
+      const check = await human;
+      if (humanCheckOn) {
+        v.turnstileToken = check ? check.token() : '';
+        root.querySelector('[data-e-human]').textContent = v.turnstileToken ? '' : 'Complete the check that you are human.';
+        if (!v.turnstileToken) return;
+      }
       const btn = form.querySelector('[type="submit"]');
       btn.disabled = true;
       const paint = (i) => {
@@ -117,6 +130,7 @@ export default {
         out.innerHTML = String(html`<div class="banner banner-bad" role="alert"><b>${err.message}</b></div>`);
       }
       btn.disabled = false;
+      if (check) check.reset();
     }, { signal: ac.signal });
     out.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -128,6 +142,6 @@ export default {
         input.value = '';
       } catch (err) { toast(err.message); }
     }, { signal: ac.signal });
-    return () => ac.abort();
+    return () => { ac.abort(); human.then((h) => h && h.remove()); };
   },
 };

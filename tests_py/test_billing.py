@@ -86,7 +86,8 @@ def test_checkout_owner_only_and_off_without_keys(api, monkeypatch, stripe_env):
     assert r.status_code == 200 and r.json()["url"].startswith("https://checkout.stripe.test")
     path, data = calls[-1]
     assert path == "/checkout/sessions" and data["line_items[0][price]"] == "price_pro" and data["metadata[org_id]"] == w["org"]
-    assert client.get(f"/api/billing/{w['org']}", headers=as_(w, "Viewer")).json()["online"] is True
+    st = client.get(f"/api/billing/{w['org']}", headers=as_(w, "Viewer")).json()
+    assert st["online"] is True and st["usage"]["seats"] == 4 and st["usage"]["companies"] == 1 and st["usage"]["auditLimit"] == 499
     monkeypatch.delenv("STRIPE_SECRET_KEY")
     assert client.post(f"/api/billing/{w['org']}/checkout", json={"plan": "pro"}, headers=as_(w, "Owner")).status_code == 503
     assert client.get(f"/api/billing/{w['org']}", headers=as_(w, "Owner")).json()["online"] is False

@@ -88,6 +88,7 @@ function mapOrg(o, ownerId) {
     retention: o.retention_period || 'Deleted within 90 days of the account closing', region: o.storage_region, branding: o.branding,
     alertRules: o.alert_rules, delivery: o.delivery, findingDisplay: o.finding_display, integrations: o.integrations,
     holdMode: o.hold_mode, logoUrl: o.logo_url, ownerId, trialEndsAt: o.trial_ends_at || null,
+    subscriptionStatus: o.subscription_status || null, cancelAtPeriodEnd: !!o.cancel_at_period_end, periodEnd: o.current_period_end || null,
   };
 }
 
@@ -501,6 +502,8 @@ export async function runAudit(input) {
   const companyId = await ensureCompany(input, org);
   if (input.files && input.files.length) await uploadFiles(companyId, input.files, { quiet: true });
   const out = await api('/audits', { body: { companyId, notify: !!input.notify, depth: input.depth === 'deep' ? 'deep' : 'standard' } });
+  // A plan limit (402) or thin input (422) comes back as a state, not an audit.
+  if (out.state) { const e = new Error(out.error); e.code = out.state; throw e; }
   return { auditId: out.auditId, companyId };
 }
 
@@ -733,7 +736,7 @@ export async function runFreeAudit(input, { onProgress = () => {} } = {}) {
   const check = checkWorkEmail(input.email);
   if (!check.ok) throw new Error(check.reason);
   const company = { title: input.title.trim(), description: input.description.trim(), industry: input.industry, country: input.country.trim() };
-  const { id } = await api('/free-audit', { body: { email: input.email.trim(), company }, auth: false });
+  const { id } = await api('/free-audit', { body: { email: input.email.trim(), company, turnstileToken: input.turnstileToken || '' }, auth: false });
   for (let i = 0; i < 30; i += 1) {
     const st = await api(`/free-audit/${id}/advance`, { auth: false });
     onProgress(Math.min(AGENTS.length - 1, st.agents.filter((x) => x.status === 'complete' || x.status === 'failed').length));
@@ -759,6 +762,43 @@ export async function getAuditLog() {
     // Share and invite entries are keyed by their token: show a stub, never a working link.
     .map((e) => ({ at: e.at, who: e.who, action: e.action, object: e.object_type,
       objectId: ['share_links', 'invites'].includes(e.object_type) && e.object_id ? `${String(e.object_id).slice(0, 4)}…` : e.object_id, detail: e.detail }));
+}
+
+// ---------------------------------------------------------------------------
+// Billing (Stripe) and your data
+
+export async function getBilling() {
+  const { org } = await need();
+  return api(`/billing/${org.id}`, { method: 'GET' });
+}
+
+/** Sends the browser to Stripe Checkout (or the portal when a subscription is live). */
+export async function startCheckout(plan) {
+  const { org } = await need();
+  const { url } = await api(`/billing/${org.id}/checkout`, { body: { plan } });
+  window.location.assign(url);
+}
+
+export async function openBillingPortal() {
+  const { org } = await need();
+  const { url } = await api(`/billing/${org.id}/portal`);
+  window.location.assign(url);
+}
+
+export async function exportOrgData() {
+  const { org } = await need();
+  return api(`/orgs/${org.id}/export`, { method: 'GET' });
+}
+
+export async function deleteOrganisation(confirm) {
+  const { org } = await need();
+  await api(`/orgs/${org.id}`, { method: 'DELETE', body: { confirm } });
+  await signOut();
+}
+
+export async function deleteAccount(confirm) {
+  await api('/me', { method: 'DELETE', body: { confirm } });
+  await signOut();
 }
 
 export async function recordExport(auditId, detail) {

@@ -1,5 +1,6 @@
 import { html } from '../lib/html.js';
 import { getCompany, getOrg, getSources, toggleTodo, updateCompany, runAudit, can, effectiveCadence, getOutcomeRows } from '../data/repo.js';
+import { showAuditError } from '../components/upgrade.js';
 import { CATEGORIES } from '../engine/config.js';
 import { fmtDate, verdictTag, meter, vClass, deltaText, TYPE_LABEL, emptyState } from '../components/ui.js';
 import { openSheet, toast } from '../components/sheet.js';
@@ -41,9 +42,11 @@ function reaudit(c, sources, ctx) {
           ctx.refresh();
           return;
         }
-        const { auditId } = await runAudit({ companyId: c.id, trigger: 'manual' });
-        close();
-        ctx.navigate(`/running/${auditId}`);
+        try {
+          const { auditId } = await runAudit({ companyId: c.id, trigger: 'manual' });
+          close();
+          ctx.navigate(`/running/${auditId}`);
+        } catch (err) { close(); showAuditError(err, ctx.navigate); }
       });
     },
   });

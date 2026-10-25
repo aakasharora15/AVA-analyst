@@ -232,6 +232,15 @@ button.dr-row[aria-pressed='true'] { border-color: rgba(170, 160, 255, .7); }
 .ac-danger { border-color: rgba(255, 143, 143, .35); }
 .ac-delete { border-color: rgba(255, 143, 143, .5); color: var(--kill); }
 .ac-bill { display: flex; flex-direction: column; gap: 1.25rem; }
+.ac-meter { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.ac-meter span { display: block; height: 100%; border-radius: inherit; background: var(--accent-strong); }
+.ac-plans { display: flex; flex-direction: column; gap: .75rem; }
+.ac-plan-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; border-radius: var(--r-md); border: 1px solid var(--line-strong); background: var(--surface-2); }
+.ac-plan-row.is-pick { border-color: var(--accent-strong); }
+.ac-plan-buy { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.ac-plan-price { font-weight: 700; font-variant-numeric: tabular-nums; }
+.ac-data-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.ac-data-row:first-of-type { border-top: 0; padding-top: 0; }
 .ac-plan { padding: 2rem; display: flex; flex-direction: column; gap: 1rem; }
 .ac-plan .small { color: var(--text-on-hero); }
 .ac-inv { padding: .5rem 0; border-top: 1px solid var(--line); }

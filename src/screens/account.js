@@ -3,7 +3,8 @@ import { BUSINESS, PLANS, TRIAL, contactHref } from '../content/business.js';
 import { planId } from '../data/shared.js';
 import {
   getOrg, updateOrg, getUsers, getCurrentUser, updateProfile, inviteMember, changeRole, removeMember, actAs,
-  getAuditLog, getCompanies, can, signOut, resetDemo, transferOwnership, MODE,
+  getAuditLog, can, signOut, resetDemo, transferOwnership, MODE,
+  getBilling, startCheckout, openBillingPortal, exportOrgData, deleteOrganisation, deleteAccount,
 } from '../data/repo.js';
 import { fmtDate, fmtDateTime, emptyState, initials } from '../components/ui.js';
 import { openSheet, toast } from '../components/sheet.js';
@@ -84,31 +85,76 @@ function team(users, me) {
 </section>`;
 }
 
-function billing(o, companies, users, audits) {
-  const pid = planId(o.plan);
-  const plan = pid === 'trial' ? { ...TRIAL, price: 'Free', unit: 'trial', for: o.trialEndsAt ? `Your trial ends on ${fmtDate(o.trialEndsAt.slice(0, 10))}. Choose a plan any time to keep going.` : 'Choose a plan any time to keep going.' } : (PLANS.find((p) => p.id === pid) || null);
-  const seatsUsed = users.filter((u) => u.status === 'active').length;
-  const changeHref = contactHref(BUSINESS.billingEmail, '/pricing', 'AVA plan change');
+const STATUS_NOTE = {
+  past_due: 'Your last payment did not go through. Update your card in Manage billing; your plan stays active while the payment is retried.',
+  incomplete: 'Your payment is still being confirmed. This usually takes a few seconds.',
+  canceled: 'Your subscription has ended. Your reports and data are kept; choose a plan to run audits again.',
+  unpaid: 'Your subscription is paused for non-payment. Update your card in Manage billing to continue.',
+};
+
+function billing(o, b, ctx) {
+  const pid = b.plan || planId(o.plan);
+  const live = ['active', 'trialing', 'past_due'].includes(b.status);
+  const plan = pid === 'trial' ? { ...TRIAL, price: 'Free', unit: 'trial' } : (PLANS.find((p) => p.id === pid) || null);
+  const trialEnd = b.trialEndsAt || o.trialEndsAt;
+  const trialOver = pid === 'trial' && trialEnd && new Date(trialEnd) < new Date();
+  const lead = pid === 'trial'
+    ? (b.status === 'canceled' ? STATUS_NOTE.canceled : trialOver ? 'Your free trial has ended. Your reports are kept; choose a plan to run audits again.'
+      : trialEnd ? `Your trial ends on ${fmtDate(trialEnd.slice(0, 10))}. Choose a plan any time; your data carries over.` : 'Choose a plan any time to keep going.')
+    : (b.cancelAtPeriodEnd && b.periodEnd ? `Ends on ${fmtDate(b.periodEnd.slice(0, 10))}. You can resume it in Manage billing until then.`
+      : b.periodEnd ? `Renews on ${fmtDate(b.periodEnd.slice(0, 10))}.` : (plan ? plan.for : ''));
+  const u = b.usage || {};
+  const limit = u.auditLimit;
+  const pct = limit ? Math.min(100, Math.round((u.audits / limit) * 100)) : 0;
+  const checkout = ctx.query.get('checkout');
+  const contact = contactHref(BUSINESS.billingEmail, '/pricing', 'AVA plan');
+  const buyable = PLANS.filter((p) => b.plans.includes(p.id));
   return html`<div class="ac-bill">
+  ${checkout === 'success' ? html`<div class="form-alert form-ok" role="status"><b>Payment received.</b><span>Your plan updates within a few seconds. Refresh if it has not changed yet.</span></div>` : ''}
+  ${STATUS_NOTE[b.status] && b.status !== 'canceled' ? html`<div class="form-alert" role="alert"><b>Billing needs attention</b><span>${STATUS_NOTE[b.status]}</span></div>` : ''}
   <div class="hero-panel ac-plan">
     <div class="stars" aria-hidden="true"></div>
     <div class="r-sec-head"><span class="lbl">Plan</span><span class="tag tag-on-hero">${plan ? plan.name : o.plan}</span></div>
-    <div class="row-actions"><span class="hero-num">${plan ? plan.price : companies.length}</span><span class="r-of">${plan ? plan.unit : 'monitored companies'}</span></div>
-    <span class="small">${o.renewal ? `Renews ${o.renewal}. ` : ''}${plan ? plan.for : 'Plan details are agreed with your organisation.'}</span>
+    <div class="row-actions"><span class="hero-num">${plan ? plan.price : '·'}</span><span class="r-of">${plan ? plan.unit : ''}</span></div>
+    <span class="small">${lead}</span>
   </div>
-  <div class="card card-pad stack-sm">
+  <div class="card card-pad stack-md">
     <h2 class="card-title">${pid === 'trial' ? 'Trial usage' : 'Usage this month'}</h2>
-    <div class="kv"><span class="muted">Audits${pid === 'trial' ? ' in your trial' : ''}</span><b>${audits.counted}${plan && plan.audits != null ? ` of ${plan.audits}` : ''} counted · ${audits.failed} not counted</b></div>
-    <div class="kv"><span class="muted">Seats</span><b>${seatsUsed}${plan ? ` of ${plan.seats}` : ''}</b></div>
-    <div class="kv"><span class="muted">Monitored companies</span><b>${companies.length}</b></div>
-    <p class="hint">Audits that issue no score, failed or declined, never count towards your allowance.</p>
-    <div class="row-actions">${pid === 'trial' ? html`<a class="btn btn-primary" href="/pricing">Choose a plan</a>` : html`<a class="btn" href="${changeHref}"${BUSINESS.billingEmail ? html` data-external` : ''}>${BUSINESS.billingEmail ? 'Contact us to change plan' : 'Compare plans'}</a>`}</div>
+    <div class="stack-sm">
+      <div class="kv"><span class="muted">Audits${pid === 'trial' ? ' in your trial' : ''}</span><b>${u.audits ?? 0}${limit != null ? ` of ${limit}` : ''}</b></div>
+      ${limit ? html`<div class="ac-meter" role="img" aria-label="${u.audits} of ${limit} audits used"><span style="width:${pct}%"></span></div>` : ''}
+    </div>
+    <div class="kv"><span class="muted">Seats</span><b>${u.seats ?? 0}${u.seatLimit != null ? ` of ${u.seatLimit}` : ''}</b></div>
+    <div class="kv"><span class="muted">Monitored companies</span><b>${u.companies ?? 0}</b></div>
+    <p class="hint">Audits that issue no score, failed or declined, never count${u.notCounted ? ` (${u.notCounted} this period)` : ''}.</p>
   </div>
-  <div class="card card-pad stack-sm">
-    <h2 class="card-title">Invoices</h2>
-    <p class="muted small">Invoices appear here once your subscription starts.</p>
-  </div>
+  ${live && b.manageable ? html`<div class="card card-pad stack-sm">
+    <h2 class="card-title">Manage billing</h2>
+    <p class="muted small">Change plan, update your card or billing address, download invoices and receipts, or cancel.</p>
+    <div class="row-actions"><button type="button" class="btn btn-primary" data-portal>Manage billing</button></div>
+  </div>` : b.online ? html`<div class="card card-pad stack-md">
+    <h2 class="card-title">Choose a plan</h2>
+    <div class="ac-plans">${buyable.map((p) => html`<div class="ac-plan-row${p.id === 'pro' ? ' is-pick' : ''}">
+      <div class="stack-sm"><b>${p.name}</b><span class="small muted">${p.audits} audits a month · ${p.seats} ${p.seats === 1 ? 'seat' : 'seats'}${p.deep ? ' · Deep audit' : ''}</span></div>
+      <div class="ac-plan-buy"><span class="ac-plan-price">${p.price}<span class="small muted"> ${p.unit}</span></span><button type="button" class="btn${p.id === 'pro' ? ' btn-primary' : ''}" data-buy="${p.id}">Choose ${p.name}</button></div>
+    </div>`)}</div>
+    <p class="hint">Secure checkout by Stripe. Cancel any time. Prices exclude VAT where it applies. Need more seats or single sign-on? <a class="link" href="${contact}"${BUSINESS.billingEmail ? html` data-external` : ''}>Talk to us about Enterprise</a>.</p>
+    ${b.manageable ? html`<div class="row-actions"><button type="button" class="btn" data-portal>Past invoices</button></div>` : ''}
+  </div>` : html`<div class="card card-pad stack-sm">
+    <h2 class="card-title">Change plan</h2>
+    <p class="muted small">Compare plans, then contact us and we will move your organisation across the same day.</p>
+    <div class="row-actions"><a class="btn btn-primary" href="/pricing">Compare plans</a>${BUSINESS.billingEmail ? html`<a class="btn" href="${contact}" data-external>Contact billing</a>` : ''}</div>
+  </div>`}
 </div>`;
+}
+
+function yourData(me) {
+  const manager = me.role === 'Owner' || me.role === 'Admin';
+  return html`<section class="card card-pad stack-md" aria-labelledby="data-title">
+  <h2 id="data-title" class="card-title">Your data</h2>
+  ${manager ? html`<div class="ac-data-row"><div class="stack-sm"><b>Export organisation data</b><span class="small muted">Every company, audit, finding, source note, comment, outcome and log entry, as one JSON file.</span></div><button type="button" class="btn" data-export-all>Download export</button></div>` : ''}
+  <div class="ac-data-row"><div class="stack-sm"><b>Delete my account</b><span class="small muted">${me.role === 'Owner' ? 'If you are the only member, your organisation and its data are deleted too. Otherwise transfer ownership first.' : 'Removes your sign-in and profile. Your comments stay with your organisation.'}</span></div><button type="button" class="btn ac-delete" data-delete-me>Delete account</button></div>
+</section>`;
 }
 
 function auditLog(log, ctx, users) {
@@ -159,24 +205,19 @@ export default {
   title: 'Account · AVA',
   className: 'account',
 
-  async load() {
-    const [o, users, me, log, companies] = await Promise.all([getOrg(), getUsers(), getCurrentUser(), getAuditLog(), getCompanies()]);
-    const qStart = new Date();
-    qStart.setMonth(Math.floor(qStart.getMonth() / 3) * 3, 1);
-    const since = qStart.toISOString().slice(0, 10);
-    const audits = { counted: 0, failed: 0 };
-    companies.forEach((c) => { if (c.latest && c.latest.date >= since) audits.counted += 1; });
-    log.filter((l) => l.action === 'audit.failed' && l.at.slice(0, 10) >= since).forEach(() => { audits.failed += 1; });
-    return { o, users, me, log, companies, audits };
+  async load(ctx) {
+    const onBilling = ctx.query.get('tab') === 'billing';
+    const [o, users, me, log, b] = await Promise.all([getOrg(), getUsers(), getCurrentUser(), getAuditLog(), onBilling ? getBilling() : null]);
+    return { o, users, me, log, billing: b };
   },
 
   render(ctx, d) {
     const tab = ctx.query.get('tab') || 'profile';
     let body;
-    if (tab === 'profile') body = profile(d.me);
+    if (tab === 'profile') body = html`${profile(d.me)}${yourData(d.me)}`;
     else if (tab === 'org') body = org(d.o, d.users, d.me);
     else if (tab === 'team') body = team(d.users, d.me);
-    else if (tab === 'billing') body = d.me.role === 'Owner' ? billing(d.o, d.companies, d.users, d.audits) : emptyState({ title: 'Billing is Owner only.', body: `Ask your organisation Owner (${d.users.find((u) => u.role === 'Owner').name}) about plan, usage and invoices.` });
+    else if (tab === 'billing') body = d.me.role === 'Owner' ? billing(d.o, d.billing, ctx) : emptyState({ title: 'Billing is Owner only.', body: `Ask your organisation Owner (${d.users.find((u) => u.role === 'Owner').name}) about plan, usage and invoices.` });
     else if (tab === 'log') body = auditLog(d.log, ctx, d.users);
     else body = brand(d.o, d.me);
     return html`
@@ -190,6 +231,19 @@ export default {
   mount(root, ctx, d) {
     const ac = new AbortController();
     const opts = { signal: ac.signal };
+    // Back from Stripe Checkout: the webhook usually lands within seconds. Wait
+    // for it, then reload so the whole workspace sees the new plan.
+    if (ctx.query.get('checkout') === 'success' && d.billing && !['active', 'trialing'].includes(d.billing.status)) {
+      let tries = 0;
+      const poll = async () => {
+        if (ac.signal.aborted) return;
+        tries += 1;
+        const b = await getBilling().catch(() => null);
+        if (b && ['active', 'trialing', 'past_due'].includes(b.status)) { window.location.assign('/account?tab=billing'); return; }
+        if (tries < 15) setTimeout(poll, 2000);
+      };
+      setTimeout(poll, 1500);
+    }
     const run = async (fn, msg) => { try { await fn(); if (msg) toast(msg); ctx.refresh(); } catch (err) { toast(err.message); } };
     root.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -253,16 +307,51 @@ export default {
         toast('Audit log exported.');
       }
       if (e.target.closest('[data-signout]')) { ctx.navigate(await signOut()); }
+      const buy = e.target.closest('[data-buy]');
+      if (buy) { buy.disabled = true; try { await startCheckout(buy.dataset.buy); } catch (err) { toast(err.message); buy.disabled = false; } }
+      const portal = e.target.closest('[data-portal]');
+      if (portal) { portal.disabled = true; try { await openBillingPortal(); } catch (err) { toast(err.message); portal.disabled = false; } }
+      const exp = e.target.closest('[data-export-all]');
+      if (exp) {
+        exp.disabled = true;
+        try {
+          const data = await exportOrgData();
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+          a.download = `ava-export-${new Date().toISOString().slice(0, 10)}.json`;
+          a.dataset.external = '';
+          a.click();
+          toast('Export downloaded.');
+        } catch (err) { toast(err.message); } finally { exp.disabled = false; }
+      }
+      if (e.target.closest('[data-delete-me]')) {
+        openSheet({
+          title: 'Delete your account',
+          body: html`<p>Your sign-in and profile are deleted now and cannot be recovered.${d.me.role === 'Owner' ? ' If you are the only member, your organisation and all of its data are deleted too.' : ''}</p><div class="fld"><label for="del-me">Type DELETE to confirm</label><input id="del-me" class="inp" autocomplete="off"></div><span class="err" role="alert" data-del-err></span><div class="row-actions"><button type="button" class="btn ac-delete" data-confirm disabled>Delete my account</button><button type="button" class="btn" data-close>Cancel</button></div>`,
+          onMount(el) {
+            const input = el.querySelector('#del-me');
+            const btn = el.querySelector('[data-confirm]');
+            input.addEventListener('input', () => { btn.disabled = input.value.trim().toUpperCase() !== 'DELETE'; });
+            btn.addEventListener('click', async () => {
+              btn.disabled = true;
+              try { await deleteAccount(input.value.trim()); window.location.assign('/'); } catch (err) { el.querySelector('[data-del-err]').textContent = err.message; btn.disabled = false; }
+            });
+          },
+        });
+      }
       if (e.target.closest('[data-reset]')) { await resetDemo(); toast('Demo data reset.'); ctx.refresh(); }
       if (e.target.closest('[data-delete-org]')) {
         openSheet({
           title: 'Delete organisation',
-          body: html`<p>This permanently deletes every company, audit, file and member for ${d.o.name} within 90 days. It cannot be undone.</p><div class="fld"><label for="del-confirm">Type the organisation name to confirm</label><input id="del-confirm" class="inp" autocomplete="off"></div><div class="row-actions"><button type="button" class="btn ac-delete" data-confirm disabled>Delete organisation</button><button type="button" class="btn" data-close>Cancel</button></div>`,
-          onMount(el, close) {
+          body: html`<p>This deletes every company, audit, file, share link and member of ${d.o.name} now. It cannot be undone. Download an export first if you need a copy. If you have a paid plan, cancel it in Manage billing first.</p><div class="fld"><label for="del-confirm">Type the organisation name to confirm</label><input id="del-confirm" class="inp" autocomplete="off"></div><span class="err" role="alert" data-del-err></span><div class="row-actions"><button type="button" class="btn ac-delete" data-confirm disabled>Delete organisation</button><button type="button" class="btn" data-close>Cancel</button></div>`,
+          onMount(el) {
             const input = el.querySelector('#del-confirm');
             const btn = el.querySelector('[data-confirm]');
-            input.addEventListener('input', () => { btn.disabled = input.value.trim() !== d.o.name; });
-            btn.addEventListener('click', () => { close(); toast('Deletion request logged. Your account manager will confirm before anything is removed.'); });
+            input.addEventListener('input', () => { btn.disabled = input.value.trim().toLowerCase() !== d.o.name.trim().toLowerCase(); });
+            btn.addEventListener('click', async () => {
+              btn.disabled = true;
+              try { await deleteOrganisation(input.value.trim()); window.location.assign('/'); } catch (err) { el.querySelector('[data-del-err]').textContent = err.message; btn.disabled = false; }
+            });
           },
         });
       }

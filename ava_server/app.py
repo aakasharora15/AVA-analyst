@@ -27,7 +27,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from . import billing, db, drift, emailer, lifecycle, privacy, scheduling
-from .plans import AllowanceReached, trial_end
+from .plans import AllowanceReached, audits_used, period_start, trial_end
 from .quality import input_problem
 from .auth import cron_guard, current_user
 from .config import DEEP_AUDIT_PLANS, PLANS, plan_id, settings
@@ -673,11 +673,19 @@ def _billing_org(user: str, org_id: str) -> dict:
 def billing_status(org_id: str, user: str = Depends(current_user)):
     _need(user, org_id, MEMBERS)
     with db.system() as c:
-        o = c.execute("select plan, subscription_status, current_period_end, cancel_at_period_end, stripe_customer_id "
-                      "from organisations where id = %s", (org_id,)).fetchone()
-    return {"online": billing.available(), "plans": sorted(billing.prices()), "plan": plan_id(o["plan"]),
+        o = c.execute("select * from organisations where id = %s", (org_id,)).fetchone()
+        used = audits_used(c, o)
+        seats = c.execute("select count(*) as n from memberships where org_id = %s and status = 'active'", (org_id,)).fetchone()["n"]
+        companies = c.execute("select count(*) as n from companies where org_id = %s", (org_id,)).fetchone()["n"]
+        not_counted = c.execute("select count(*) as n from audits where org_id = %s and trigger <> 'shadow' and status = 'failed' and created_at >= %s",
+                                (org_id, period_start(o))).fetchone()["n"]
+    pid = plan_id(o["plan"])
+    return {"online": billing.available(), "plans": sorted(billing.prices()), "plan": pid,
             "status": o["subscription_status"], "periodEnd": o["current_period_end"].isoformat() if o["current_period_end"] else None,
-            "cancelAtPeriodEnd": o["cancel_at_period_end"], "manageable": bool(o["stripe_customer_id"])}
+            "cancelAtPeriodEnd": o["cancel_at_period_end"], "manageable": bool(o["stripe_customer_id"]),
+            "trialEndsAt": o["trial_ends_at"].isoformat() if o["trial_ends_at"] else None,
+            "usage": {"audits": used, "auditLimit": PLANS[pid]["audits"], "notCounted": not_counted,
+                      "seats": seats, "seatLimit": o["seat_limit"], "companies": companies}}
 
 
 class CheckoutIn(BaseModel):

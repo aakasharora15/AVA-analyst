@@ -757,6 +757,22 @@ export async function sendFreeAudit() {}
 // Audit log (spec 4.10)
 
 export async function getAuditLog() { await wait(); return clone(db.auditLog); }
+
+const DEMO_ONLY = 'Not available in the demo workspace.';
+export async function getBilling() {
+  const month = todayIso().slice(0, 7);
+  const thisMonth = db.audits.filter((a) => (a.date || '').startsWith(month));
+  return {
+    online: false, plans: [], plan: db.org.plan, status: null, periodEnd: null, cancelAtPeriodEnd: false, manageable: false, trialEndsAt: null,
+    usage: { audits: thisMonth.filter((a) => a.status !== 'failed').length, auditLimit: null, notCounted: thisMonth.filter((a) => a.status === 'failed').length,
+      seats: db.users.filter((u) => u.status === 'active').length, seatLimit: db.org.seats ?? null, companies: db.companies.length },
+  };
+}
+export async function startCheckout() { throw new Error(DEMO_ONLY); }
+export async function openBillingPortal() { throw new Error(DEMO_ONLY); }
+export async function exportOrgData() { await wait(); return { exportedAt: new Date().toISOString(), format: 'AVA export v1', organisation: clone(db.org), companies: clone(db.companies), audits: clone(db.audits) }; }
+export async function deleteOrganisation() { throw new Error(DEMO_ONLY); }
+export async function deleteAccount() { throw new Error(DEMO_ONLY); }
 export async function recordExport(auditId, detail) { log('export.pdf', 'Audit', auditId, detail); persist(); }
 
 // ---------------------------------------------------------------------------

@@ -1,9 +1,9 @@
 import { html } from '../lib/html.js';
 import { inputProblem } from '../data/shared.js';
 import { runAudit, getCompany, getOrg, can } from '../data/repo.js';
+import { showAuditError } from '../components/upgrade.js';
 import { canDeepAudit } from '../data/shared.js';
 import { TYPE_LABEL } from '../components/ui.js';
-import { toast } from '../components/sheet.js';
 
 export const INDUSTRIES = ['SaaS / Technology', 'E-Commerce / Retail', 'Food and Beverage', 'Healthcare', 'Finance / Fintech', 'Education', 'Real Estate', 'Media / Entertainment', 'Logistics / Supply Chain', 'Other'];
 const DELIVERY = ['Digital / Online', 'Physical', 'Hybrid', 'SaaS', 'Marketplace'];
@@ -183,7 +183,7 @@ export default {
         const { auditId } = await runAudit({ ...v, companyId: company ? company.id : null, files });
         ctx.navigate(`/running/${auditId}`);
       } catch (err) {
-        toast(err.message);
+        showAuditError(err, ctx.navigate);
         btn.disabled = false;
         btn.textContent = 'Run audit';
       }
