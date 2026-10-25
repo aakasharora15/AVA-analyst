@@ -21,6 +21,10 @@ def _jwks_client(url: str) -> jwt.PyJWKClient:
 
 
 def verify_token(token: str) -> str:
+    return verify_claims(token)["sub"]
+
+
+def verify_claims(token: str) -> dict:
     s = settings()
     try:
         if s.supabase_jwt_secret:
@@ -37,7 +41,7 @@ def verify_token(token: str) -> str:
         raise HTTPException(401, "Invalid session")
     if claims.get("aal") != "aal2" and _has_second_factor(sub):
         raise HTTPException(401, "Enter the code from your authenticator app to continue.")
-    return sub
+    return claims
 
 
 def _has_second_factor(user_id: str) -> bool:
@@ -52,6 +56,18 @@ def current_user(authorization: str = Header(default="")) -> str:
     if not authorization.lower().startswith("bearer "):
         raise HTTPException(401, "Sign in to continue")
     return verify_token(authorization.split(" ", 1)[1])
+
+
+def staff_user(authorization: str = Header(default="")) -> str:
+    """An AVA team member (AVA_STAFF_EMAILS), signed in with two-factor."""
+    if not authorization.lower().startswith("bearer "):
+        raise HTTPException(401, "Sign in to continue")
+    claims = verify_claims(authorization.split(" ", 1)[1])
+    if str(claims.get("email", "")).lower() not in settings().staff_emails:
+        raise HTTPException(404, "Not found")
+    if claims.get("aal") != "aal2":
+        raise HTTPException(403, "AVA review needs two-factor sign-in. Turn it on under Account, then Security.")
+    return claims["sub"]
 
 
 def cron_guard(authorization: str = Header(default="")) -> None:

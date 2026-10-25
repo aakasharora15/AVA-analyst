@@ -19,17 +19,17 @@ import hmac
 import os
 import re
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import psycopg
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import billing, db, drift, emailer, lifecycle, privacy, scheduling
+from . import billing, db, drift, emailer, lifecycle, metrics, privacy, scheduling
 from .plans import AllowanceReached, audits_used, period_start, trial_end
 from .quality import input_problem
-from .auth import cron_guard, current_user
+from .auth import cron_guard, current_user, staff_user
 from .config import DEEP_AUDIT_PLANS, PLANS, plan_id, settings
 
 if settings().sentry_dsn:
@@ -310,7 +310,6 @@ STATUS_LABEL = {"open": "Open", "accepted": "Accepted", "dismissed": "Dismissed"
 
 
 def _now_iso() -> str:
-    from datetime import datetime, timezone
     return datetime.now(timezone.utc).isoformat()
 
 
@@ -732,6 +731,243 @@ async def _billing_error(_: Request, exc: billing.BillingError):
 
 
 # ---------------------------------------------------------------------------
+# Verified company metrics (plans with tracking, config/plans.json). The
+# founder reports through a private link, the client's team confirms, and an
+# AVA reviewer verifies.
+
+
+class MetricsIn(BaseModel):
+    revenue: float | None = Field(default=None, ge=0, le=1e13)
+    cash: float | None = Field(default=None, ge=0, le=1e13)
+    burn: float | None = Field(default=None, ge=0, le=1e12)
+    headcount: int | None = Field(default=None, ge=0, le=10_000_000)
+    customers: int | None = Field(default=None, ge=0, le=10_000_000_000)
+    status: str = Field(default="operating", pattern="^(operating|raising|acquired|shut_down|paused)$")
+    note: str = Field(default="", max_length=2000)
+    period: date | None = None
+
+    def values(self) -> dict:
+        v = self.model_dump(exclude={"period"})
+        if all(v[f] is None for f in metrics.FIELDS):
+            raise HTTPException(422, "Enter at least one number")
+        return v
+
+
+def _metric_row(r: dict | None) -> dict | None:
+    if not r:
+        return None
+    return {"id": r["id"], "period": r["period"].isoformat(), **{f: (float(r[f]) if r[f] is not None and f in ("revenue", "cash", "burn") else r[f]) for f in metrics.FIELDS},
+            "runway": metrics.runway(r), "status": r["status"], "note": r["note"], "source": r["source"], "submittedBy": r["submitted_by"],
+            "submittedAt": r["submitted_at"].isoformat(), "flags": r["flags"], "confirmedBy": r["confirmed_by_name"],
+            "confirmedAt": r["confirmed_at"].isoformat() if r["confirmed_at"] else None, "avaStatus": r["ava_status"],
+            "avaNote": r["ava_note"], "avaReviewedAt": r["ava_reviewed_at"].isoformat() if r["ava_reviewed_at"] else None}
+
+
+def _tracked_company(user: str, company_id: str, roles: tuple[str, ...]) -> dict:
+    with db.system() as c:
+        co = c.execute("select co.*, o.plan, o.name as org_name from companies co join organisations o on o.id = co.org_id where co.id = %s",
+                       (company_id,)).fetchone()
+    if not co:
+        raise HTTPException(404, "Not found")
+    _need(user, co["org_id"], roles)
+    if not metrics.tracked(co["plan"]):
+        raise HTTPException(403, "Verified metric tracking is part of the Enterprise plan")
+    return co
+
+
+def _request_by_token(token: str) -> dict:
+    with db.system() as c:
+        r = c.execute("select r.*, co.title, co.org_id, o.name as org_name from metric_requests r join companies co on co.id = r.company_id "
+                      "join organisations o on o.id = r.org_id where r.token_hash = %s and r.kind = 'founder'", (metrics.hash_token(token),)).fetchone()
+    if not r:
+        raise HTTPException(404, "This link is not valid. Ask the team that sent it for a new one.")
+    return r
+
+
+@app.get("/api/metric-requests/{token}")
+def metric_request(token: str):
+    r = _request_by_token(token)
+    with db.system() as c:
+        prev = c.execute("select * from company_metrics where company_id = %s and period < %s order by period desc limit 1",
+                         (r["company_id"], r["period"])).fetchone()
+        this = c.execute("select * from company_metrics where company_id = %s and period = %s", (r["company_id"], r["period"])).fetchone()
+    state = "submitted" if r["submitted_at"] else ("expired" if r["expires_at"] < datetime.now(timezone.utc) else "open")
+    if this and this["confirmed_at"]:
+        state = "confirmed"
+    return {"state": state, "company": r["title"], "organisation": r["org_name"], "period": r["period"].isoformat(),
+            "periodLabel": metrics.period_label(r["period"]), "previous": _metric_row(prev), "current": _metric_row(this)}
+
+
+@app.post("/api/metric-requests/{token}")
+def submit_metric_request(token: str, body: MetricsIn):
+    r = _request_by_token(token)
+    if r["expires_at"] < datetime.now(timezone.utc):
+        raise HTTPException(410, "This link has expired. Ask the team that sent it for a new one.")
+    values = body.values()
+    with db.system(f"Founder ({r['email']})") as c:
+        co = c.execute("select * from companies where id = %s", (r["company_id"],)).fetchone()
+        try:
+            row = metrics.upsert(c, co, r["period"], values, "founder", f"Founder ({r['email']})")
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        c.execute("update metric_requests set submitted_at = now() where id = %s", (r["id"],))
+        owner = metrics._owner_email(c, co)
+        if owner:
+            emailer.queue(c, co["org_id"], owner, f"{co['title']} sent {metrics.period_label(r['period'])} numbers: please confirm",
+                          f"{r['email']} submitted {co['title']}'s numbers for {metrics.period_label(r['period'])}."
+                          + (f" Worth a look: {'; '.join(row['flags'])}." if row["flags"] else "")
+                          + f"\n\nReview and confirm: {settings().app_url}/company/{co['id']}#metrics", "metrics")
+    return {"ok": True, "flags": row["flags"]}
+
+
+@app.get("/api/companies/{company_id}/tracking")
+def company_tracking(company_id: str, user: str = Depends(current_user)):
+    with db.system() as c:
+        co = c.execute("select co.*, o.plan from companies co join organisations o on o.id = co.org_id where co.id = %s", (company_id,)).fetchone()
+    if not co:
+        raise HTTPException(404, "Not found")
+    _need(user, co["org_id"], MEMBERS)
+    if not metrics.tracked(co["plan"]):
+        return {"tracked": False}
+    period = metrics.last_period()
+    with db.system() as c:
+        rows = c.execute("select * from company_metrics where company_id = %s order by period desc limit 24", (company_id,)).fetchall()
+        req = c.execute("select kind, email, created_at, reminded_at, submitted_at, expires_at from metric_requests where company_id = %s and period = %s",
+                        (company_id, period)).fetchone()
+    return {"tracked": True, "founderEmail": co["founder_email"], "ownerId": str(co["owner_id"]) if co["owner_id"] else None,
+            "period": period.isoformat(), "periodLabel": metrics.period_label(period),
+            "request": {"kind": req["kind"], "email": req["email"], "sentAt": req["created_at"].isoformat(),
+                        "remindedAt": req["reminded_at"].isoformat() if req["reminded_at"] else None,
+                        "submittedAt": req["submitted_at"].isoformat() if req["submitted_at"] else None} if req else None,
+            "rows": [_metric_row(r) for r in rows]}
+
+
+class TrackingIn(BaseModel):
+    founderEmail: str | None = Field(default=None, max_length=320)
+    ownerId: str | None = None
+
+
+@app.patch("/api/companies/{company_id}/tracking")
+def set_tracking(company_id: str, body: TrackingIn, user: str = Depends(current_user)):
+    co = _tracked_company(user, company_id, RUNNERS)
+    email = (body.founderEmail or "").strip().lower() or None
+    if email and not _EMAIL.match(email):
+        raise HTTPException(422, "Enter a valid email for the founder")
+    with db.system(_name(user)) as c:
+        if body.ownerId and not c.execute("select 1 from memberships where org_id = %s and user_id = %s and status = 'active'",
+                                          (co["org_id"], body.ownerId)).fetchone():
+            raise HTTPException(422, "The owner must be an active member of your organisation")
+        c.execute("update companies set founder_email = %s, owner_id = %s where id = %s", (email, body.ownerId or None, company_id))
+    return {"ok": True}
+
+
+@app.post("/api/companies/{company_id}/metric-request")
+def send_metric_request(company_id: str, user: str = Depends(current_user)):
+    """Ask the founder now (also re-sends a fresh link if this month's is still open)."""
+    co = _tracked_company(user, company_id, RUNNERS)
+    if not co["founder_email"]:
+        raise HTTPException(422, "Add the founder's email first")
+    period = metrics.last_period()
+    with db.system(_name(user)) as c:
+        old = c.execute("select id, submitted_at from metric_requests where company_id = %s and period = %s", (company_id, period)).fetchone()
+        if old and old["submitted_at"]:
+            raise HTTPException(409, "The founder has already sent this month's numbers")
+        if old:
+            c.execute("delete from metric_requests where id = %s", (old["id"],))
+        metrics.create_request(c, co, period, co["org_name"])
+    return {"ok": True, "to": co["founder_email"]}
+
+
+@app.post("/api/companies/{company_id}/metrics")
+def enter_metrics(company_id: str, body: MetricsIn, user: str = Depends(current_user)):
+    """The client's team enters (or corrects and confirms) a month's numbers."""
+    co = _tracked_company(user, company_id, RUNNERS)
+    period = (body.period or metrics.last_period()).replace(day=1)
+    if period > metrics.last_period():
+        raise HTTPException(422, "You can only record months that have ended")
+    values = body.values()
+    who = _name(user)
+    with db.system(who) as c:
+        try:
+            row = metrics.upsert(c, co, period, values, "team", who, confirm_user=user)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        c.execute("update metric_requests set submitted_at = coalesce(submitted_at, now()) where company_id = %s and period = %s", (company_id, period))
+        moves = metrics.after_confirm(c, row)
+    return {"metric": _metric_row(row), "alerts": moves}
+
+
+@app.post("/api/metrics/{metric_id}/confirm")
+def confirm_metrics(metric_id: str, user: str = Depends(current_user)):
+    with db.system() as c:
+        m = c.execute("select company_id from company_metrics where id = %s", (metric_id,)).fetchone()
+    if not m:
+        raise HTTPException(404, "Not found")
+    co = _tracked_company(user, m["company_id"], RUNNERS)
+    who = _name(user)
+    with db.system(who) as c:
+        row = c.execute("update company_metrics set confirmed_by = %s, confirmed_by_name = %s, confirmed_at = now(), ava_status = 'pending' "
+                        "where id = %s and ava_status <> 'verified' returning *", (user, who, metric_id)).fetchone()
+        if not row:
+            raise HTTPException(409, "These numbers are already verified by AVA")
+        c.execute("insert into audit_log (org_id, who, action, object_type, object_id, detail) values (%s, %s, 'metrics.confirmed', 'company_metrics', %s, %s)",
+                  (co["org_id"], who, metric_id, f"Confirmed {metrics.period_label(row['period'])} numbers for {co['title']}"))
+        moves = metrics.after_confirm(c, row)
+    return {"metric": _metric_row(row), "alerts": moves}
+
+
+# AVA team review: confirmed numbers across every tracked organisation.
+
+
+@app.get("/api/staff/metrics")
+def staff_queue(status: str = "pending", _: str = Depends(staff_user)):
+    if status not in ("pending", "queried", "verified"):
+        raise HTTPException(422, "Unknown status")
+    with db.system() as c:
+        rows = c.execute(
+            "select m.*, co.title, o.name as org_name, o.plan from company_metrics m join companies co on co.id = m.company_id "
+            "join organisations o on o.id = m.org_id where m.ava_status = %s and m.confirmed_at is not null "
+            "order by m.confirmed_at limit 200", (status,)).fetchall()
+        out = []
+        for r in rows:
+            prev = c.execute("select * from company_metrics where company_id = %s and period < %s order by period desc limit 1",
+                             (r["company_id"], r["period"])).fetchone()
+            out.append({**_metric_row(r), "company": r["title"], "companyId": r["company_id"], "organisation": r["org_name"],
+                        "previous": _metric_row(prev)})
+    return {"items": out}
+
+
+class ReviewIn(BaseModel):
+    action: str = Field(pattern="^(verify|query)$")
+    note: str = Field(default="", max_length=2000)
+
+
+@app.post("/api/staff/metrics/{metric_id}")
+def staff_review(metric_id: str, body: ReviewIn, user: str = Depends(staff_user)):
+    if body.action == "query" and not body.note.strip():
+        raise HTTPException(422, "Say what needs checking")
+    with db.system() as c:
+        email = c.execute("select email from auth.users where id = %s", (user,)).fetchone()["email"]
+    with db.system(f"AVA ({email})") as c:
+        row = c.execute("update company_metrics set ava_status = %s, ava_reviewer = %s, ava_reviewed_at = now(), ava_note = %s "
+                        "where id = %s and confirmed_at is not null returning *",
+                        ("verified" if body.action == "verify" else "queried", email, body.note.strip(), metric_id)).fetchone()
+        if not row:
+            raise HTTPException(404, "Not found")
+        co = c.execute("select * from companies where id = %s", (row["company_id"],)).fetchone()
+        label = metrics.period_label(row["period"])
+        c.execute("insert into audit_log (org_id, who, action, object_type, object_id, detail) values (%s, 'AVA', %s, 'company_metrics', %s, %s)",
+                  (row["org_id"], f"metrics.{'verified' if body.action == 'verify' else 'queried'}", metric_id,
+                   f"AVA {'verified' if body.action == 'verify' else 'queried'} {label} numbers for {co['title']}" + (f": {body.note.strip()}" if body.note.strip() else "")))
+        if body.action == "query":
+            owner = metrics._owner_email(c, co)
+            if owner:
+                emailer.queue(c, row["org_id"], owner, f"AVA has a question about {co['title']}'s {label} numbers",
+                              f"{body.note.strip()}\n\nCorrect and re-confirm them here: {settings().app_url}/company/{co['id']}#metrics", "metrics")
+    return {"metric": _metric_row(row)}
+
+
+# ---------------------------------------------------------------------------
 # Your data: export and deletion (privacy policy, UK GDPR).
 
 
@@ -980,7 +1216,7 @@ def cron_advance():
 
 @app.get("/api/cron/cadence", dependencies=[Depends(cron_guard)])
 def cron_cadence():
-    return {"queued": scheduling.queue_due()}
+    return {"queued": scheduling.queue_due(), "metrics": metrics.run_daily()}
 
 
 @app.get("/api/cron/digest", dependencies=[Depends(cron_guard)])

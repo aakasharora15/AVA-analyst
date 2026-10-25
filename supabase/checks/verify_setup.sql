@@ -1,15 +1,15 @@
 -- Run in the Supabase SQL editor after applying every migration. Every row should say PASS.
 select check_name, result, case when ok then 'PASS' else 'FAIL' end as status from (
-  select 1 as n, 'Tables in public schema (expect 27)' as check_name,
-         count(*)::text as result, count(*) = 27 as ok
+  select 1 as n, 'Tables in public schema (expect 29)' as check_name,
+         count(*)::text as result, count(*) = 29 as ok
   from pg_tables where schemaname = 'public'
   union all
   select 2, 'Tables WITHOUT row-level security (expect none)',
          coalesce(string_agg(tablename, ', '), 'none'), count(*) = 0
   from pg_tables where schemaname = 'public' and not rowsecurity
   union all
-  select 3, 'Access policies on public tables (expect 39)',
-         count(*)::text, count(*) = 39
+  select 3, 'Access policies on public tables (expect 40)',
+         count(*)::text, count(*) = 40
   from pg_policies where schemaname = 'public' and policyname <> 'mfa_required'
   union all
   select 4, 'Data room bucket exists and is private',

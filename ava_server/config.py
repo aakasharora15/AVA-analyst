@@ -73,6 +73,8 @@ class Settings:
         # Error reporting (Sentry) and where operational alerts go.
         self.sentry_dsn = env("SENTRY_DSN", "").strip()
         self.ops_email = env("AVA_OPS_EMAIL", "").strip()
+        # AVA team members who verify Enterprise metrics (comma-separated emails).
+        self.staff_emails = {e.strip().lower() for e in env("AVA_STAFF_EMAILS", "").split(",") if e.strip()}
         self.free_email_domains = set(
             d.strip() for d in env(
                 "AVA_FREE_EMAIL_DOMAINS",
