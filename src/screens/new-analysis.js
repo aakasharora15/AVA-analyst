@@ -8,6 +8,7 @@ import { SUBJECTS, DECISIONS, RELATIONSHIPS, OPERATING_FIELDS, isOperating, type
 export const INDUSTRIES = ['SaaS / Technology', 'E-Commerce / Retail', 'Food and Beverage', 'Healthcare', 'Finance / Fintech', 'Education', 'Real Estate', 'Media / Entertainment', 'Logistics / Supply Chain', 'Other'];
 const DELIVERY = ['Digital / Online', 'Physical', 'Hybrid', 'SaaS', 'Marketplace'];
 const BUDGETS = ['Under £10,000', '£10,000 to £50,000', '£50,000 to £100,000', '£100,000 to £500,000', '£500,000+'];
+const PREFILL = new Set(['title', 'description', 'industry', 'country', 'city', 'model', 'target', 'price', 'delivery', 'budget', 'competitors', 'subject', 'decision', 'relationship']);
 const OPTIONAL = ['model', 'city', 'target', 'price', 'delivery', 'budget', 'competitors'];
 
 function depth(v, files) {
@@ -44,9 +45,11 @@ export default {
   },
 
   render(ctx, { company, deepAllowed }) {
+    // A link can prefill the form (?title=...&description=...); the person still reviews and runs it.
+    const prefill = Object.fromEntries([...PREFILL].map((k) => [k, ctx.query.get(k)]).filter(([, x]) => x));
     const v = company
       ? { ...company, decision: company.decision || DECISION_FROM_TYPE[company.type] || '' }
-      : {};
+      : prefill;
     const operating = isOperating(v.subject);
     const d = depth(v, 0);
     const allowed = can('runAudits');
