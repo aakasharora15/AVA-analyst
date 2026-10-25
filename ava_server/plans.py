@@ -4,6 +4,7 @@ model call is made once an organisation has used its allowance."""
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from .config import PLANS, plan_id
 
@@ -30,6 +31,21 @@ def period_start(org: dict) -> datetime:
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
+UK = ZoneInfo("Europe/London")
+
+
+def day_start(now: datetime | None = None) -> datetime:
+    """Midnight UK time today: daily allowances reset then."""
+    local = (now or _now()).astimezone(UK)
+    return local.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def audits_today(c, org: dict) -> int:
+    return c.execute(
+        "select count(*) as n from audits where org_id = %s and trigger <> 'shadow' and status <> 'failed' "
+        "and counted_against_usage and created_at >= %s", (org["id"], day_start())).fetchone()["n"]
+
+
 def audits_used(c, org: dict) -> int:
     """Audits that count: everything started in the period except failed or
     declined ones (they never count) and internal consistency re-runs."""
@@ -48,6 +64,11 @@ def check_allowance(c, org: dict) -> None:
             raise AllowanceReached("Your subscription has ended. Choose a plan to keep running audits. Your reports are kept.")
         raise AllowanceReached("Your free trial has ended. Choose a plan to keep running audits.")
     limit = plan["audits"]
+    daily = plan.get("dailyAudits")
+    if daily is not None and audits_today(c, org) >= daily:
+        raise AllowanceReached(f"Your free trial includes {daily} audit a day. Your next audit is available tomorrow, "
+                               "or choose a plan to keep going now." if daily == 1 else
+                               f"Your plan includes {daily} audits a day. More are available tomorrow.")
     if limit is not None and audits_used(c, org) >= limit:
         if pid == "trial":
             raise AllowanceReached(f"Your free trial includes {limit} audits and you have used them all. Choose a plan to keep going.")

@@ -378,21 +378,30 @@ def test_new_organisations_start_on_a_capped_free_trial(api):
     with db.system() as c:
         o = c.execute("select plan, trial_ends_at, seat_limit, created_at from organisations where id = %s", (org,)).fetchone()
         assert o["plan"] == "trial" and o["seat_limit"] == 3
-        assert 13 <= (o["trial_ends_at"] - o["created_at"]).days <= 14
+        assert 6 <= (o["trial_ends_at"] - o["created_at"]).days <= 7
         cos = [c.execute("insert into companies (org_id, title, description, industry, country) values (%s, %s, %s, 'Fintech', 'UK') returning id",
-                         (org, f"T{i}", DESC)).fetchone()["id"] for i in range(5)]
-    started = [client.post("/api/audits", json={"companyId": cid}, headers=token(uid)) for cid in cos[:3]]
-    assert all(r.status_code == 200 for r in started)
-    over = client.post("/api/audits", json={"companyId": cos[3]}, headers=token(uid))
-    assert over.status_code == 402 and over.json()["state"] == "upgrade" and "3 audits" in over.json()["error"]
-    # Failed or declined audits never count against the allowance.
+                         (org, f"T{i}", DESC)).fetchone()["id"] for i in range(10)]
+    # One audit a day.
+    first = client.post("/api/audits", json={"companyId": cos[0]}, headers=token(uid))
+    assert first.status_code == 200
+    again = client.post("/api/audits", json={"companyId": cos[1]}, headers=token(uid))
+    assert again.status_code == 402 and again.json()["state"] == "upgrade" and "tomorrow" in again.json()["error"]
+    # A failed or declined audit never counts, so it can be run again the same day.
     with db.system() as c:
-        c.execute("update audits set status = 'failed', counted_against_usage = false where id = %s", (started[0].json()["auditId"],))
-    assert client.post("/api/audits", json={"companyId": cos[3]}, headers=token(uid)).status_code == 200
+        c.execute("update audits set status = 'failed', counted_against_usage = false where id = %s", (first.json()["auditId"],))
+    assert client.post("/api/audits", json={"companyId": cos[1]}, headers=token(uid)).status_code == 200
+    # Seven in total: earlier days' audits count towards the trial cap.
+    with db.system() as c:
+        c.execute("update organisations set created_at = now() - interval '4 days' where id = %s", (org,))
+        c.execute("update audits set created_at = now() - interval '2 days' where org_id = %s", (org,))
+        for i in range(6):
+            c.execute("insert into audits (org_id, company_id, status, created_at) values (%s, %s, 'complete', now() - interval '3 days')", (org, cos[2 + i]))
+    total = client.post("/api/audits", json={"companyId": cos[8]}, headers=token(uid))
+    assert total.status_code == 402 and "7 audits" in total.json()["error"]
     # Once the trial period ends, no more audits until a plan is chosen.
     with db.system() as c:
         c.execute("update organisations set trial_ends_at = now() - interval '1 day' where id = %s", (org,))
-    ended = client.post("/api/audits", json={"companyId": cos[4]}, headers=token(uid))
+    ended = client.post("/api/audits", json={"companyId": cos[9]}, headers=token(uid))
     assert ended.status_code == 402 and "trial has ended" in ended.json()["error"]
 
 

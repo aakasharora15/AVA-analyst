@@ -1,5 +1,5 @@
 import { html } from '../lib/html.js';
-import { BUSINESS, PLANS, TRIAL } from '../content/business.js';
+import { BUSINESS, PLANS, TRIAL_SUMMARY } from '../content/business.js';
 import { MODE } from '../data/repo.js';
 
 // Help: how AVA works, common questions, live service status, what's new and
@@ -18,7 +18,7 @@ const FAQ = [
   ['How long does an audit take?', html`<p>Usually a few minutes. You can leave the running screen; tick "Email me when it finishes" and the result arrives in your inbox.</p>`],
   ['Which files can AVA read?', html`<p>PDF, Word (.docx), PowerPoint (.pptx, including speaker notes), Excel (.xlsx, every sheet), CSV and text. Scanned PDFs need a text layer, and older .doc, .ppt and .xls files should be saved in the newer format first.</p>`],
   ['Is my data used to train AI?', html`<p>No. What you submit is used only to produce your audits, and our AI provider does not train on it either. See the <a class="link" href="/privacy">privacy policy</a> and <a class="link" href="/trust">trust centre</a>.</p>`],
-  ['What counts as an audit?', html`<p>Every audit that issues a score: new analyses, re-audits, scheduled monitoring and audits triggered by new evidence. Failed or declined audits do not count. The free trial includes ${TRIAL.audits} audits over ${TRIAL.trialDays} days; paid plans reset monthly (${PLANS.map((p) => `${p.name} ${p.audits}`).join(', ')}).</p>`],
+  ['What counts as an audit?', html`<p>Every audit that issues a score: new analyses, re-audits, scheduled monitoring and audits triggered by new evidence. Failed or declined audits do not count. The ${TRIAL_SUMMARY}; paid plans reset monthly (${PLANS.map((p) => `${p.name} ${p.audits}`).join(', ')}).</p>`],
   ['How do I change plan, card or get an invoice?', html`<p>Owners go to Account, then Billing and usage. Manage billing opens the secure billing portal for plan changes, card details, invoices and cancellation.</p>`],
   ['How do I turn on two-factor sign-in?', html`<p>Account, then Security, then Turn on two-factor. Scan the code with an authenticator app and enter the 6-digit code. From then on, AVA shows no data to a session that has not entered a code.</p>`],
   ['Can I share a report with someone outside my organisation?', html`<p>Yes. Open the report and choose Share. Each link can have a password and an expiry date, every view is logged, and you can revoke it at any time.</p>`],
@@ -28,6 +28,7 @@ const FAQ = [
 // Most recent first. Product changes users will notice, in plain words.
 const CHANGES = [
   ['25 October 2026', [
+    'The free trial is now 7 days, with one audit a day.',
     'Subscribe and manage billing online: change plan, update your card, download invoices.',
     'Two-factor sign-in with an authenticator app, plus "Sign out everywhere".',
     'AVA now reads Word, PowerPoint (including speaker notes) and Excel files.',
@@ -37,7 +38,7 @@ const CHANGES = [
     'Enterprise: verified monthly company metrics. Founders report through a private link, your team confirms, AVA checks.',
   ]],
   ['24 October 2026', [
-    'New organisations start with a 14-day free trial.',
+    'New organisations start on a free trial.',
     'Deep audit on Pro Max and Enterprise: extended analysis for high-stakes decisions.',
     'AVA declines to score inputs too thin to assess, rather than guessing.',
   ]],

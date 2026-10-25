@@ -37,7 +37,7 @@ function planBar(session) {
     const what = o.subscriptionStatus === 'canceled' ? 'Your subscription has ended.' : 'Your free trial has ended.';
     return html`<div class="plan-bar plan-bar-warn" role="status"><span><b>${what}</b> Reports stay readable. New audits need a plan.${ask}</span>${act ? html`<span class="demo-bar-actions">${act}</span>` : ''}</div>`;
   }
-  return html`<div class="plan-bar" role="status"><span><b>Free trial</b> · ${days} ${days === 1 ? 'day' : 'days'} left.${owner ? ' Choose a plan any time; everything carries over.' : ''}</span>${act ? html`<span class="demo-bar-actions">${act}</span>` : ''}</div>`;
+  return html`<div class="plan-bar" role="status"><span><b>Free trial</b> · ${days} ${days === 1 ? 'day' : 'days'} left · one audit a day.${owner ? ' Choose a plan any time; everything carries over.' : ''}</span>${act ? html`<span class="demo-bar-actions">${act}</span>` : ''}</div>`;
 }
 
 function frame(route, ctx, session) {

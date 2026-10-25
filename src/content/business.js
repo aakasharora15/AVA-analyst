@@ -24,6 +24,8 @@ export const PLANS = PLAN_COPY.map((p) => ({ ...p, ...PLAN_LIMITS.plans[p.id] })
 
 // Every new organisation starts here.
 export const TRIAL = { id: 'trial', ...PLAN_LIMITS.plans.trial };
+/** One line for the trial, wherever it is described. */
+export const TRIAL_SUMMARY = `${TRIAL.trialDays}-day free trial: one audit a day, up to ${TRIAL.audits} in total`;
 
 // Founding team. A bio is shown only once supplied.
 export const TEAM = [

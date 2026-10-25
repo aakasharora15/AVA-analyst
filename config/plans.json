@@ -1,15 +1,16 @@
 {
-  "_comment": "Plan entitlements, shared by the server (allowances, seats, Deep audit) and the website. Prices and descriptions live in src/content/business.js. null means no fixed limit. tracking: monthly verified company metrics (founder reports, client confirms, AVA verifies).",
+  "_comment": "Plan entitlements, shared by the server (allowances, seats, Deep audit) and the website. Prices and descriptions live in src/content/business.js. null means no fixed limit. dailyAudits: at most this many audits per UK calendar day. tracking: monthly verified company metrics (founder reports, client confirms, AVA verifies).",
   "default": "trial",
   "plans": {
     "trial": {
       "name": "Free trial",
-      "audits": 3,
+      "audits": 7,
       "auditsPer": "trial",
       "seats": 3,
       "deep": false,
-      "trialDays": 14,
-      "tracking": false
+      "trialDays": 7,
+      "tracking": false,
+      "dailyAudits": 1
     },
     "basic": {
       "name": "Basic",

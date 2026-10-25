@@ -27,7 +27,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from . import billing, db, drift, emailer, lifecycle, metrics, privacy, scheduling
-from .plans import AllowanceReached, audits_used, period_start, trial_end
+from .plans import AllowanceReached, audits_today, audits_used, period_start, trial_end
 from .quality import input_problem
 from .auth import cron_guard, current_user, staff_user
 from .config import DEEP_AUDIT_PLANS, PLANS, plan_id, settings
@@ -674,6 +674,7 @@ def billing_status(org_id: str, user: str = Depends(current_user)):
     with db.system() as c:
         o = c.execute("select * from organisations where id = %s", (org_id,)).fetchone()
         used = audits_used(c, o)
+        today = audits_today(c, o)
         seats = c.execute("select count(*) as n from memberships where org_id = %s and status = 'active'", (org_id,)).fetchone()["n"]
         companies = c.execute("select count(*) as n from companies where org_id = %s", (org_id,)).fetchone()["n"]
         not_counted = c.execute("select count(*) as n from audits where org_id = %s and trigger <> 'shadow' and status = 'failed' and created_at >= %s",
@@ -684,6 +685,7 @@ def billing_status(org_id: str, user: str = Depends(current_user)):
             "cancelAtPeriodEnd": o["cancel_at_period_end"], "manageable": bool(o["stripe_customer_id"]),
             "trialEndsAt": o["trial_ends_at"].isoformat() if o["trial_ends_at"] else None,
             "usage": {"audits": used, "auditLimit": PLANS[pid]["audits"], "notCounted": not_counted,
+                      "today": today, "dailyLimit": PLANS[pid].get("dailyAudits"),
                       "seats": seats, "seatLimit": o["seat_limit"], "companies": companies}}
 
 

@@ -125,6 +125,7 @@ function billing(o, b, ctx) {
       <div class="kv"><span class="muted">Audits${pid === 'trial' ? ' in your trial' : ''}</span><b>${u.audits ?? 0}${limit != null ? ` of ${limit}` : ''}</b></div>
       ${limit ? html`<div class="ac-meter" role="img" aria-label="${u.audits} of ${limit} audits used"><span style="width:${pct}%"></span></div>` : ''}
     </div>
+    ${u.dailyLimit ? html`<div class="kv"><span class="muted">Today</span><b>${u.today ?? 0} of ${u.dailyLimit}${(u.today ?? 0) >= u.dailyLimit ? ' · next audit available tomorrow' : ''}</b></div>` : ''}
     <div class="kv"><span class="muted">Seats</span><b>${u.seats ?? 0}${u.seatLimit != null ? ` of ${u.seatLimit}` : ''}</b></div>
     <div class="kv"><span class="muted">Monitored companies</span><b>${u.companies ?? 0}</b></div>
     <p class="hint">Audits that issue no score, failed or declined, never count${u.notCounted ? ` (${u.notCounted} this period)` : ''}.</p>

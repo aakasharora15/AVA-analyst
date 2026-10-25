@@ -85,6 +85,8 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Log
 
+- 2026-10-25: Free trial changed to 7 days, one audit a day (UK calendar day), at most 7 in total; failed or declined audits still never count. Organisations already on a trial keep their original end date. Worst-case model cost per trial: about US$9.
+
 - 2026-10-25: First real audit: 6 min, US$1.26. Running screen rebuilt so people can see the engine work: live clock and time left, agent pipeline with current step, live activity feed of real events and sources found. Free audits capped at 5 a day by default (AVA_FREE_AUDITS_PER_DAY) to protect a small API budget. One finding came back without a source: to fix.
 
 - 2026-10-25: Migrations 7, 8 and 9 applied; verify_setup all PASS. Owner's personal organisation (aakasharoraa4@gmail.com) set to Pro Max by hand, no billing; change when the owner switches account.
