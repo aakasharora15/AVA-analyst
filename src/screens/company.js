@@ -1,6 +1,7 @@
 import { html } from '../lib/html.js';
-import { getCompany, getOrg, getSources, toggleTodo, updateCompany, runAudit, can, effectiveCadence, getOutcomeRows } from '../data/repo.js';
+import { getCompany, getOrg, getSources, getUsers, getTracking, toggleTodo, updateCompany, runAudit, can, effectiveCadence, getOutcomeRows } from '../data/repo.js';
 import { showAuditError } from '../components/upgrade.js';
+import { metricsCard, mountMetricsCard } from '../components/metrics-card.js';
 import { CATEGORIES } from '../engine/config.js';
 import { fmtDate, verdictTag, meter, vClass, deltaText, TYPE_LABEL, emptyState } from '../components/ui.js';
 import { openSheet, toast } from '../components/sheet.js';
@@ -59,11 +60,11 @@ export default {
   async load(ctx) {
     const c = await getCompany(ctx.params.id);
     if (!c) throw new Error('This company does not exist.');
-    const [org, sources, outcomes] = await Promise.all([getOrg(), getSources(c.id), getOutcomeRows()]);
-    return { c, org, sources, outcomes: outcomes.filter((o) => o.companyId === c.id) };
+    const [org, sources, outcomes, tracking, users] = await Promise.all([getOrg(), getSources(c.id), getOutcomeRows(), getTracking(c.id), getUsers()]);
+    return { c, org, sources, outcomes: outcomes.filter((o) => o.companyId === c.id), tracking: tracking && tracking.tracked ? { ...tracking, companyId: c.id } : null, users };
   },
 
-  render(ctx, { c, org, sources, outcomes }) {
+  render(ctx, { c, org, sources, outcomes, tracking, users }) {
     const a = c.latest;
     const mode = effectiveCadence(c, org);
     const logged = outcomes.filter((o) => o.outcome).length;
@@ -103,6 +104,8 @@ ${a ? html`<section aria-label="Company areas" class="co-tiles">
   <a class="tile" href="/benchmarks?company=${c.id}"><span class="lbl">Benchmarks</span><b>Against ${TYPE_LABEL[c.type].toLowerCase()}s</b><span class="small muted">Same venture type only.</span></a>
 </section>` : emptyState({ title: 'No audits yet.', body: 'Run the first audit to get a Resilience Score and directive. Every later audit is stored so you can see how risk moves.', action: canRun ? { href: `/new-analysis?company=${c.id}`, label: 'Run the first audit' } : null })}
 
+${metricsCard(tracking, { canEdit: canRun, users, currency: org.currency || 'GBP' })}
+
 <div class="co-two">
   <section class="card card-pad stack-md" aria-labelledby="cad-title">
     <h2 id="cad-title" class="card-title">Monitoring</h2>
@@ -121,9 +124,11 @@ ${a ? html`<section aria-label="Company areas" class="co-tiles">
 </div>`;
   },
 
-  mount(root, ctx, { c, sources }) {
+  mount(root, ctx, { c, sources, tracking, org }) {
     const ac = new AbortController();
     const opts = { signal: ac.signal };
+    mountMetricsCard(root, ctx, { t: tracking, currency: org.currency || 'GBP' });
+    if (window.location.hash === '#metrics') root.querySelector('#metrics')?.scrollIntoView({ block: 'start' });
     root.addEventListener('click', (e) => { if (e.target.closest('[data-reaudit]')) reaudit(c, sources, ctx); }, opts);
     root.addEventListener('change', async (e) => {
       if (e.target.matches('[data-todo]')) { await toggleTodo(c.id, e.target.dataset.todo); ctx.refresh(); }

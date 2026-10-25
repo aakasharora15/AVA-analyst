@@ -19,6 +19,8 @@ import exportScreen from './screens/export.js';
 import account from './screens/account.js';
 import { shared, invite, noAccess, maintenance, privacy, terms, trust, demo } from './screens/misc.js';
 import help from './screens/help.js';
+import update from './screens/update.js';
+import avaReview from './screens/ava-review.js';
 
 // layout: 'public' = site header and footer; 'app' = signed-in app header;
 // 'bare' = no chrome.
@@ -36,6 +38,7 @@ export const routes = [
   { path: '/maintenance', screen: maintenance, layout: 'public' },
   { path: '/shared/:token', screen: shared, layout: 'bare' },
   { path: '/invite/:token', screen: invite, layout: 'public' },
+  { path: '/update/:token', screen: update, layout: 'bare' },
 
   // App
   { path: '/onboarding', screen: onboarding, layout: 'bare', auth: true },
@@ -53,5 +56,6 @@ export const routes = [
   { path: '/export', screen: exportScreen, layout: 'app' },
   { path: '/account', screen: account, layout: 'app' },
   { path: '/no-access', screen: noAccess, layout: 'app' },
+  { path: '/ava-review', screen: avaReview, layout: 'app' },
   { path: '/demo', screen: demo, layout: 'bare' },
 ];

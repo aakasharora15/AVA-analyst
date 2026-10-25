@@ -5,6 +5,7 @@ export const TRIGGER_LABEL = {
   score: 'Score move',
   high: 'New HIGH finding',
   evidence: 'New evidence',
+  metrics: 'Numbers moved',
 };
 
 export function alertTitle(a) {
@@ -19,6 +20,8 @@ export function alertTitle(a) {
       return 'New HIGH finding';
     case 'evidence':
       return a.detail || 'New evidence added to the data room';
+    case 'metrics':
+      return a.detail || 'Reported numbers moved materially';
     default:
       return 'Alert';
   }

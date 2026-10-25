@@ -147,3 +147,13 @@ export const confirmMfaSetup = (...a) => impl().confirmMfaSetup(...a);
 export const verifyMfa = (...a) => impl().verifyMfa(...a);
 export const disableMfa = (...a) => impl().disableMfa(...a);
 export const signOutEverywhere = (...a) => impl().signOutEverywhere(...a);
+export const getTracking = (...a) => impl().getTracking(...a);
+export const setTracking = (...a) => impl().setTracking(...a);
+export const requestFounderUpdate = (...a) => impl().requestFounderUpdate(...a);
+export const enterMetrics = (...a) => impl().enterMetrics(...a);
+export const confirmMetrics = (...a) => impl().confirmMetrics(...a);
+// The founder update page is public: it always talks to the real backend.
+export const getMetricRequest = (...a) => primary.getMetricRequest(...a);
+export const submitMetricRequest = (...a) => primary.submitMetricRequest(...a);
+export const getReviewQueue = (...a) => primary.getReviewQueue(...a);
+export const reviewMetrics = (...a) => primary.reviewMetrics(...a);

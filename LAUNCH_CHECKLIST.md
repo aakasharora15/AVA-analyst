@@ -21,6 +21,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] 1.12 Apply migration 4 (supabase/migrations/20261024000001_hide_model.sql): users can no longer read which AI model ran an audit (2026-10-24)
 - [ ] 1.15 Apply migration 7 (supabase/migrations/20261025000001_billing.sql): billing columns, trial end system-only, free audit address limits. Needed before the free audit works on the live site
 - [ ] 1.16 Apply migration 8 (supabase/migrations/20261025000002_mfa.sql): two-factor enforced in the database
+- [ ] 1.18 Apply migration 9 (supabase/migrations/20261025000003_metrics.sql): Enterprise verified metrics. Then verify_setup.sql: 29 tables, 40 policies, all PASS
 - [ ] 1.17 Authentication → Multi-Factor: confirm TOTP (authenticator app) is enabled (on by default)
 - [~] 1.10 Google sign-in: Google Cloud project "ava-verdict" (dedicated AVA Verdict account), OAuth client "AVA Verdict staging" (External, Testing), Supabase Google provider saved. Remaining: rotate the secret exposed in a screenshot, test once the site URL is set
 - [ ] 1.11 Microsoft sign-in (recommended over Apple for funds and corporates; awaiting decision)
@@ -72,6 +73,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [~] 6.5 Free audit spend protection built (2026-10-25): per-address and daily caps on now. Remaining: Cloudflare Turnstile widget, set VITE_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY
 - [x] 6.6 Data export and deletion: export organisation data, delete account, delete organisation (2026-10-25)
 - [x] 6.7 Two-factor sign-in (authenticator app), sign out everywhere (2026-10-25)
+- [x] 6.9 Enterprise verified metrics (2026-10-25): founder link on the 1st, reminder day 7, escalation day 14, client confirms, AVA verifies at /ava-review, alerts on runway under 6 months, revenue down 20%, shut down or acquired. Remaining: set AVA_STAFF_EMAILS (each reviewer turns on two-factor); decide who on the AVA team reviews and how fast (target: within 2 working days)
 - [x] 6.8 Search (⌘K), Help page with live status and What's new, first-run checklist (2026-10-25)
 - [ ] 6.4 Internal admin screen for drift reports and holds
 
@@ -82,6 +84,8 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [ ] 7.3 Switch production to live; first pilot client
 
 ## Log
+
+- 2026-10-25: Enterprise verified metrics: monthly founder reporting, client confirmation, AVA review queue, portfolio runway and freshness, alerts on material moves. Tracking is a per-plan flag in config/plans.json (Enterprise only).
 
 - 2026-10-25: SaaS foundation: Stripe billing, trial bar and upgrade prompt, free audit limits and bot check, Sentry, ops alerts, data export and deletion, two-factor enforced in the database, Office files, search, Help, first-run checklist. Fixed: plan limit sent users to /running/undefined; an Owner could extend their own trial; live portfolio said "Sample data"; share tokens appeared in the audit log export.
 

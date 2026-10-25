@@ -34,6 +34,7 @@ const CHANGES = [
     'Search anything with ⌘K (Ctrl K on Windows).',
     'Download all your organisation\'s data, or delete your account, from Account.',
     'A setup checklist on your portfolio to get to a first verdict quickly.',
+    'Enterprise: verified monthly company metrics. Founders report through a private link, your team confirms, AVA checks.',
   ]],
   ['24 October 2026', [
     'New organisations start with a 14-day free trial.',

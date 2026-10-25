@@ -777,7 +777,7 @@ def _tracked_company(user: str, company_id: str, roles: tuple[str, ...]) -> dict
 
 def _request_by_token(token: str) -> dict:
     with db.system() as c:
-        r = c.execute("select r.*, co.title, co.org_id, o.name as org_name from metric_requests r join companies co on co.id = r.company_id "
+        r = c.execute("select r.*, co.title, co.org_id, o.name as org_name, o.currency from metric_requests r join companies co on co.id = r.company_id "
                       "join organisations o on o.id = r.org_id where r.token_hash = %s and r.kind = 'founder'", (metrics.hash_token(token),)).fetchone()
     if not r:
         raise HTTPException(404, "This link is not valid. Ask the team that sent it for a new one.")
@@ -794,7 +794,7 @@ def metric_request(token: str):
     state = "submitted" if r["submitted_at"] else ("expired" if r["expires_at"] < datetime.now(timezone.utc) else "open")
     if this and this["confirmed_at"]:
         state = "confirmed"
-    return {"state": state, "company": r["title"], "organisation": r["org_name"], "period": r["period"].isoformat(),
+    return {"state": state, "company": r["title"], "organisation": r["org_name"], "currency": r["currency"] or "GBP", "period": r["period"].isoformat(),
             "periodLabel": metrics.period_label(r["period"]), "previous": _metric_row(prev), "current": _metric_row(this)}
 
 
@@ -925,14 +925,14 @@ def staff_queue(status: str = "pending", _: str = Depends(staff_user)):
         raise HTTPException(422, "Unknown status")
     with db.system() as c:
         rows = c.execute(
-            "select m.*, co.title, o.name as org_name, o.plan from company_metrics m join companies co on co.id = m.company_id "
+            "select m.*, co.title, o.name as org_name, o.plan, o.currency from company_metrics m join companies co on co.id = m.company_id "
             "join organisations o on o.id = m.org_id where m.ava_status = %s and m.confirmed_at is not null "
             "order by m.confirmed_at limit 200", (status,)).fetchall()
         out = []
         for r in rows:
             prev = c.execute("select * from company_metrics where company_id = %s and period < %s order by period desc limit 1",
                              (r["company_id"], r["period"])).fetchone()
-            out.append({**_metric_row(r), "company": r["title"], "companyId": r["company_id"], "organisation": r["org_name"],
+            out.append({**_metric_row(r), "company": r["title"], "companyId": r["company_id"], "organisation": r["org_name"], "currency": r["currency"] or "GBP",
                         "previous": _metric_row(prev)})
     return {"items": out}
 

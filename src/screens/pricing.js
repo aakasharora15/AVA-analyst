@@ -43,6 +43,7 @@ const COMPARE = [
   ['Branded reports', false, false, false, true, true],
   ['Priority support', false, false, false, true, true],
   ['Single sign-on', false, false, false, false, true],
+  ['Verified monthly company metrics (founder-reported, AVA-checked)', false, false, false, false, true],
   ['Custom retention and onboarding', false, false, false, false, true],
 ];
 const cell = (v) => (v === true
@@ -85,7 +86,7 @@ export default {
 </section>
 
 <section class="card p-note">
-  <div class="p-note-copy"><b>Need more than Pro Max?</b><span class="muted">Enterprise plans add single sign-on, custom audit volumes and Deep audits, data retention terms and dedicated onboarding.</span></div>
+  <div class="p-note-copy"><b>Need more than Pro Max?</b><span class="muted">Enterprise plans add single sign-on, verified monthly company metrics reported by founders and checked by AVA's team, custom audit volumes and Deep audits, data retention terms and dedicated onboarding.</span></div>
   <a class="btn btn-primary" href="${contactHref(BUSINESS.salesEmail, '/sign-in?demo=1', 'AVA Enterprise')}"${BUSINESS.salesEmail ? html` data-external` : ''}>${BUSINESS.salesEmail ? 'Contact sales' : 'Explore the live demo'}</a>
 </section>`;
   },

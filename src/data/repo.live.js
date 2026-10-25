@@ -10,7 +10,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { AGENTS, ALERT_RULES, CATEGORIES, SECTIONS } from '../engine/config.js';
 import { outcomeStatus } from '../engine/outcomes.js';
-import { roleCan, checkEmailFormat, passwordProblem, PASSWORD_RULE, todayIso, addDays, computeNextRun, kindOf, pickAudit, enrichAudit, lockFindings } from './shared.js';
+import { roleCan, checkEmailFormat, passwordProblem, PASSWORD_RULE, todayIso, addDays, computeNextRun, kindOf, pickAudit, enrichAudit, lockFindings, tracksMetrics } from './shared.js';
 import { load, save } from '../lib/storage.js';
 
 export const MODE = 'live';
@@ -437,7 +437,14 @@ export async function getCompanies() {
     alertState(org.id, user.id),
   ]);
   const audits = as.map((a) => mapAudit(a));
-  const out = cs.map((c) => summarise(mapCompany(c), audits, ss, al, st));
+  const ms = tracksMetrics(org) ? await rows(sb.from('company_metrics').select('company_id, period, revenue, cash, burn, status, confirmed_at, ava_status').eq('org_id', org.id).order('period', { ascending: false })) : [];
+  const out = cs.map((c) => {
+    const s = summarise(mapCompany(c), audits, ss, al, st);
+    if (!tracksMetrics(org)) return s;
+    const m = ms.find((x) => x.company_id === c.id);
+    s.metrics = m ? { period: m.period, revenue: m.revenue == null ? null : Number(m.revenue), cash: m.cash == null ? null : Number(m.cash), burn: m.burn == null ? null : Number(m.burn), status: m.status, confirmed: !!m.confirmed_at, avaStatus: m.ava_status } : null;
+    return s;
+  });
   firstCompanyId = out[0]?.id || null;
   const latest = out.find((c) => c.latest);
   firstAuditId = latest ? latest.latest.id : null;
@@ -831,6 +838,19 @@ export async function getAuditLog() {
     .map((e) => ({ at: e.at, who: e.who, action: e.action, object: e.object_type,
       objectId: ['share_links', 'invites'].includes(e.object_type) && e.object_id ? `${String(e.object_id).slice(0, 4)}…` : e.object_id, detail: e.detail }));
 }
+
+// ---------------------------------------------------------------------------
+// Verified company metrics (Enterprise)
+
+export async function getTracking(companyId) { return api(`/companies/${companyId}/tracking`, { method: 'GET' }); }
+export async function setTracking(companyId, { founderEmail, ownerId }) { await api(`/companies/${companyId}/tracking`, { method: 'PATCH', body: { founderEmail: founderEmail || null, ownerId: ownerId || null } }); }
+export async function requestFounderUpdate(companyId) { return api(`/companies/${companyId}/metric-request`); }
+export async function enterMetrics(companyId, values) { return api(`/companies/${companyId}/metrics`, { body: values }); }
+export async function confirmMetrics(metricId) { return api(`/metrics/${metricId}/confirm`); }
+export async function getMetricRequest(token) { return api(`/metric-requests/${encodeURIComponent(token)}`, { method: 'GET', auth: false }); }
+export async function submitMetricRequest(token, values) { return api(`/metric-requests/${encodeURIComponent(token)}`, { body: values, auth: false }); }
+export async function getReviewQueue(status = 'pending') { return (await api(`/staff/metrics?status=${status}`, { method: 'GET' })).items; }
+export async function reviewMetrics(metricId, action, note = '') { return api(`/staff/metrics/${metricId}`, { body: { action, note } }); }
 
 // ---------------------------------------------------------------------------
 // Billing (Stripe) and your data

@@ -779,6 +779,15 @@ export async function confirmMfaSetup() { throw new Error(DEMO_ONLY); }
 export async function verifyMfa() {}
 export async function disableMfa() { throw new Error(DEMO_ONLY); }
 export async function signOutEverywhere() { return signOut(); }
+export async function getTracking() { return { tracked: false }; }
+export async function setTracking() { throw new Error(DEMO_ONLY); }
+export async function requestFounderUpdate() { throw new Error(DEMO_ONLY); }
+export async function enterMetrics() { throw new Error(DEMO_ONLY); }
+export async function confirmMetrics() { throw new Error(DEMO_ONLY); }
+export async function getMetricRequest() { throw new Error('This link is not valid. Ask the team that sent it for a new one.'); }
+export async function submitMetricRequest() { throw new Error(DEMO_ONLY); }
+export async function getReviewQueue() { const e = new Error('Not found'); e.status = 404; throw e; }
+export async function reviewMetrics() { throw new Error(DEMO_ONLY); }
 export async function recordExport(auditId, detail) { log('export.pdf', 'Audit', auditId, detail); persist(); }
 
 // ---------------------------------------------------------------------------

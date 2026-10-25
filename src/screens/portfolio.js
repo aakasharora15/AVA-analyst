@@ -5,12 +5,17 @@ import { openSheet, toast } from '../components/sheet.js';
 import { DIRECTIVES, VENTURE_TYPES } from '../engine/config.js';
 import { INDUSTRIES } from './new-analysis.js';
 import { load as loadPref, save as savePref } from '../lib/storage.js';
+import { tracksMetrics, runwayMonths, metricsStale } from '../data/shared.js';
 
 const FILTERS = [{ key: 'ALL', label: 'All' }, ...[...DIRECTIVES].reverse().map((d) => ({ key: d, label: d[0] + d.slice(1).toLowerCase() }))];
 const SORTS = { score: 'Lowest score first', change: 'Biggest fall first', date: 'Most recent audit', name: 'Name' };
+// Enterprise (verified metrics) adds these.
+const METRIC_SORTS = { runway: 'Shortest runway first', stale: 'Oldest numbers first' };
 
 function sortRows(rows, sort) {
   const r = rows.slice();
+  if (sort === 'runway') r.sort((a, b) => (runwayMonths(a.metrics) ?? 999) - (runwayMonths(b.metrics) ?? 999));
+  if (sort === 'stale') r.sort((a, b) => (a.metrics?.period || '').localeCompare(b.metrics?.period || ''));
   if (sort === 'score') r.sort((a, b) => (a.latest?.score ?? 999) - (b.latest?.score ?? 999));
   if (sort === 'change') r.sort((a, b) => (a.delta ?? 0) - (b.delta ?? 0));
   if (sort === 'date') r.sort((a, b) => (b.latest?.date || '').localeCompare(a.latest?.date || ''));
@@ -25,17 +30,29 @@ function nextAuditLabel(c, org) {
   return html`<span class="small">${fmtDate(c.cadence.nextRun)}</span>`;
 }
 
+// Latest verified numbers: runway, and whether they are current and checked.
+function metricsCell(c) {
+  const m = c.metrics;
+  if (!m) return html`<span class="tag tag-neutral">No numbers</span>`;
+  const rw = runwayMonths(m);
+  const stale = metricsStale(m.period);
+  return html`<span class="pf-mt"><span class="small ${rw != null && rw < 6 ? 'delta-down' : ''}">${rw != null ? `${rw} mo runway` : 'Runway –'}</span>${stale
+    ? html`<span class="tag v-hold verdict">Stale</span>`
+    : m.avaStatus === 'verified' ? html`<span class="xsmall muted">Verified</span>` : html`<span class="xsmall muted">${m.confirmed ? 'In AVA review' : 'To confirm'}</span>`}</span>`;
+}
+
 function rowsView(rows, org) {
+  const tracked = tracksMetrics(org);
   if (!rows.length) return html`<div class="card card-pad muted">No companies match this filter. <button type="button" class="link-btn" data-clear>Clear the filters</button></div>`;
   return html`<div class="pf-table">
-  <div class="pf-row pf-headrow lbl" aria-hidden="true"><span>Company</span><span>Score</span><span>Directive</span><span>Since last audit</span><span>Last audit</span><span>Next audit</span></div>
+  <div class="pf-row pf-headrow lbl" aria-hidden="true"><span>Company</span><span>Score</span><span>Directive</span><span>Since last audit</span><span>${tracked ? 'Numbers' : 'Last audit'}</span><span>Next audit</span></div>
   <ul class="pf-list" aria-label="Companies">
   ${rows.map((c) => html`<li><a class="card pf-row ${c.latest ? vClass(c.latest.finalDirective) : ''}" href="/company/${c.id}">
     <span class="pf-name"><b>${c.title}</b><span class="xsmall muted">${c.industry} · ${TYPE_LABEL[c.type]}</span></span>
     <span class="pf-score">${c.latest ? html`<span class="num pf-num">${c.latest.score}</span><span class="bar pf-bar"><span style="width:${c.latest.score}%;background:var(--v)"></span></span>` : html`<span class="muted small">Not audited</span>`}</span>
     <span>${c.running ? html`<span class="tag sev-low">RUNNING</span>` : c.latest ? verdictTag(c.latest.finalDirective) : html`<span class="tag tag-neutral">NONE</span>`}${c.latest && c.latest.status === 'partial' ? html` <span class="xsmall muted">Partial</span>` : ''}</span>
     <span class="small strong ${deltaClass(c.delta)}">${c.latest ? deltaText(c.delta, { long: true }) : ''}</span>
-    <span class="small muted">${c.latest ? fmtDate(c.latest.date) : ''}</span>
+    ${tracked ? metricsCell(c) : html`<span class="small muted">${c.latest ? fmtDate(c.latest.date) : ''}</span>`}
     <span class="pf-next">${nextAuditLabel(c, org)}</span>
   </a></li>`)}
   </ul>
@@ -269,7 +286,10 @@ export default {
     const down = scored.filter((c) => c.delta < 0).length;
     const movers = scored.filter((c) => c.delta !== null).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 3);
     const unread = companies.reduce((s, c) => s + c.unreadAlerts, 0);
-    let rows = companies.filter((c) => (pref.filter === 'ALL' || c.latest?.finalDirective === pref.filter) && (pref.type === 'all' || c.type === pref.type));
+    const tracked = tracksMetrics(org);
+    const sorts = tracked ? { ...SORTS, ...METRIC_SORTS } : SORTS;
+    if (!sorts[pref.sort]) pref.sort = 'score';
+    let rows = companies.filter((c) => (pref.filter === 'ALL' || (pref.filter === 'STALE' ? metricsStale(c.metrics && c.metrics.period) : c.latest?.finalDirective === pref.filter)) && (pref.type === 'all' || c.type === pref.type));
     rows = sortRows(rows, pref.sort);
 
     return html`
@@ -318,10 +338,10 @@ ${empty ? html`
 
 <section aria-label="Companies" class="stack-md">
   <div class="pf-controls">
-    <div class="chips" role="group" aria-label="Filter by directive">${FILTERS.map((f) => html`<button type="button" class="chip-btn" data-filter="${f.key}" aria-pressed="${pref.filter === f.key}">${f.label}</button>`)}</div>
+    <div class="chips" role="group" aria-label="Filter by directive">${[...FILTERS, ...(tracked ? [{ key: 'STALE', label: 'Needs numbers' }] : [])].map((f) => html`<button type="button" class="chip-btn" data-filter="${f.key}" aria-pressed="${pref.filter === f.key}">${f.label}</button>`)}</div>
     <div class="row-actions">
       <label class="pf-select small">Type <select class="inp" data-type-filter id="pf-type">${[['all', 'All types'], ...Object.entries(TYPE_LABEL)].map(([k, l]) => html`<option value="${k}"${pref.type === k ? html` selected` : ''}>${l}</option>`)}</select></label>
-      <label class="pf-select small">Sort <select class="inp" data-sort id="pf-sort">${Object.entries(SORTS).map(([k, l]) => html`<option value="${k}"${pref.sort === k ? html` selected` : ''}>${l}</option>`)}</select></label>
+      <label class="pf-select small">Sort <select class="inp" data-sort id="pf-sort">${Object.entries(sorts).map(([k, l]) => html`<option value="${k}"${pref.sort === k ? html` selected` : ''}>${l}</option>`)}</select></label>
     </div>
   </div>
   ${rowsView(rows, org)}

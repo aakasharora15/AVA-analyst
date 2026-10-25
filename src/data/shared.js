@@ -65,6 +65,19 @@ export const planId = (plan) => {
   return PLAN_LIMITS.plans[id] ? id : PLAN_LIMITS.default;
 };
 export const canDeepAudit = (org) => !!PLAN_LIMITS.plans[planId(org && org.plan)].deep;
+/** Monthly verified company metrics (Enterprise). */
+export const tracksMetrics = (org) => !!PLAN_LIMITS.plans[planId(org && org.plan)].tracking;
+
+/** Months of cash left at the current burn, or null when it cannot be worked out. */
+export const runwayMonths = (m) => (m && m.burn > 0 && m.cash != null ? Math.round((m.cash / m.burn) * 10) / 10 : null);
+
+/** A company's numbers are stale when the newest is more than two months old. */
+export const metricsStale = (period, today = todayIso()) => {
+  if (!period) return true;
+  const d = new Date(`${today.slice(0, 7)}-01T00:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() - 2);
+  return period < d.toISOString().slice(0, 10);
+};
 
 export const todayIso = () => new Date().toISOString().slice(0, 10);
 

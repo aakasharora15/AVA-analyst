@@ -95,6 +95,14 @@ const ICONS = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
 };
 
+/** Money in the organisation's currency, compact for tables: £1.2M, £480K. */
+export function fmtMoney(n, currency = 'GBP', { compact = true } = {}) {
+  if (n == null || Number.isNaN(Number(n))) return '–';
+  try {
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency, notation: compact ? 'compact' : 'standard', maximumFractionDigits: compact ? 1 : 0 }).format(Number(n));
+  } catch { return String(n); }
+}
+
 export function icon(name, { size = 20 } = {}) {
   return raw(`<svg class="ico" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`);
 }
