@@ -75,3 +75,21 @@ def test_failed_email_is_retried(api, monkeypatch):
     assert emailer.send_pending()["sent"] == 1
     with db.system() as c:
         assert c.execute("select sent_at, error from email_outbox where subject = 'Hi'").fetchone()["error"] is None
+
+
+def test_emails_are_sent_as_branded_html_with_text_fallback(api, monkeypatch):
+    from ava_server import email_html, emailer
+    page = email_html.render("Aakash invited you to DZ on AVA", "Aakash invited you to join DZ on AVA as Viewer <script>.\n\n"
+                             "Accept: https://avaverdict.com/invite/abc\n\nThe invitation expires in 7 days.\n\n--\n"
+                             "Manage alert settings: https://avaverdict.com/alerts\n")
+    assert '<a href="https://avaverdict.com/invite/abc"' in page and "Accept invitation" in page
+    assert "&lt;script&gt;" in page and "<script>" not in page
+    assert "/icons/email-wordmark.png" in page and "Manage alert settings" in page
+    monkeypatch.setenv("RESEND_API_KEY", "re_test")
+    with db.system() as c:
+        c.execute("delete from email_outbox where sent_at is null")
+        c.execute("insert into email_outbox (to_email, subject, body, kind) values ('a@b.example', 'Hello', 'Body\n\nOpen: https://x.example', 'test')")
+    sent = {}
+    monkeypatch.setattr(httpx, "post", lambda url, json=None, **k: sent.update(json) or httpx.Response(200, json={}, request=httpx.Request("POST", url)))
+    emailer.send_pending()
+    assert sent["text"].startswith("Body") and "<html" in sent["html"]
