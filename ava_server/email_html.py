@@ -203,6 +203,8 @@ def _steps(items: list[str]) -> str:
             f'style="margin:8px 0 4px;border-top:1px solid {LINE};padding-top:20px;"><tr>{cells}</tr></table>')
 
 
+ADVICE = "AVA is decision support, not investment, financial or legal advice."
+
 SCORED = ("audit-complete", "free-audit-result", "free-audit", "share", None)
 
 EXTRAS = {
@@ -259,7 +261,7 @@ def render(subject: str, body: str, kind: str | None = None) -> str:
       {extra}
     </td></tr>
     <tr><td class="mu" style="padding:22px 12px 0;font-family:{FONT};font-size:12px;line-height:20px;color:{MUTED};">
-      {footer + "<br>" if footer else ""}AVA Verdict &middot; <a class="mu" href="{app}" style="color:{MUTED};text-decoration:underline;">{html.escape(app.split("//")[-1])}</a>
+      {footer + "<br>" if footer else ""}{ADVICE + "<br>" if visual else ""}AVA Verdict &middot; <a class="mu" href="{app}" style="color:{MUTED};text-decoration:underline;">{html.escape(app.split("//")[-1])}</a>
     </td></tr>
   </table>
 </td></tr></table>

@@ -1,5 +1,6 @@
 import { html } from '../lib/html.js';
 import { logo } from './logo.js';
+import { ADVICE_NOTE } from './ui.js';
 
 export function siteFooter({ large = false } = {}) {
   return html`<footer class="site-footer">
@@ -15,5 +16,6 @@ export function siteFooter({ large = false } = {}) {
       <a href="/terms">Terms</a>
     </nav>
   </div>
+  <p class="wrap xsmall muted site-footer-note">${ADVICE_NOTE}</p>
 </footer>`;
 }

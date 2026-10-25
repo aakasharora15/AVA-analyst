@@ -1,7 +1,7 @@
 import { html } from '../lib/html.js';
 import { getAudit, getUsers, can, setFindingStatus, setFindingOwner, addComment, createShareLink, revokeShareLink, getCurrentUser, challengeFinding, answerChallenge, getQuestions, askQuestion } from '../data/repo.js';
 import { AGENTS, SECTIONS, CATEGORIES, DIRECTIVES } from '../engine/config.js';
-import { fmtDate, fmtDateTime, verdictTag, sevTag, vClass, meter, exposureBar, TYPE_LABEL, icon, deltaText } from '../components/ui.js';
+import { fmtDate, fmtDateTime, verdictTag, sevTag, vClass, meter, exposureBar, TYPE_LABEL, icon, deltaText, ADVICE_NOTE } from '../components/ui.js';
 import { openSheet, toast } from '../components/sheet.js';
 import { SUBJECTS, DECISIONS, labelOf, isOperating, runningMeaning } from '../data/shared.js';
 
@@ -19,6 +19,8 @@ export function reportText(a) {
     ...a.findings.filter((f) => f.severity === 'HIGH').slice(0, 5).map((f) => `- [${f.severity}] ${f.title}`),
     '',
     `Calibration ${a.calibrationVersion}. Prompt ${a.promptVersion}.`,
+    '',
+    ADVICE_NOTE,
   ];
   return lines.filter((l, i) => l || lines[i - 1]).join('\n');
 }
@@ -566,6 +568,7 @@ ${chain(a)}
 <div class="r-two">${whatWouldChange(a)}${trace(a)}</div>
 ${guest ? '' : askCta(a)}
 ${agentGroups(a, guest)}
+<p class="xsmall muted r-advice">${ADVICE_NOTE} <a class="link" href="/terms">Terms</a></p>
 ${guest ? '' : html`<section aria-label="Next steps" class="hero-panel r-close">
   <div class="stars" aria-hidden="true"></div>
   <div class="stack-sm"><span class="r-close-title">Re-audit after the next material change.</span><span class="small">${a.company.title}'s record keeps every audit. Compare any two to see which findings moved and what evidence moved them.</span></div>

@@ -39,6 +39,9 @@ export function deltaClass(d) {
   return d > 0 ? 'delta-up' : 'delta-down';
 }
 
+// Shown wherever a score or verdict is shown (terms: "AVA is decision support, not advice").
+export const ADVICE_NOTE = 'AVA is decision support, not investment, financial or legal advice. Verdicts are automated opinions on the material supplied and can be wrong; use them alongside your own judgement.';
+
 export const TYPE_LABEL = { startup: 'Startup', strategy: 'Strategy', campaign: 'Campaign' };
 
 /** 25-segment score meter in the directive's colour. */

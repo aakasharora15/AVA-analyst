@@ -13,7 +13,7 @@ import json
 from datetime import date, datetime, timezone
 
 from . import db, emailer
-from .agents import AgentError, AgentRunner, build_context, company_fields
+from .agents import AgentError, AgentRunner, agent_brief, build_context, company_fields
 from .config import AGENTS, CALIBRATION, CALIBRATIONS, SECTIONS, model_for, settings
 from .engine import score_audit, score_excluding_dismissed
 from .plans import check_allowance
@@ -140,7 +140,7 @@ def _context(audit: dict, agent_n: int, extra_sources: list[dict]) -> tuple[str,
         scored = score_audit(_findings_for_engine(audit["id"]), company["type"], status, None, CALIBRATION)
         extra = ("<findings>\n" + "\n".join(json.dumps(dict(f), ensure_ascii=False) for f in findings) + "\n</findings>\n"
                  f"<score>Resilience Score {scored['score']} of 100. Base directive {scored['baseDirective']}.</score>")
-    return build_context(company, sources, prior, extra), company, sources
+    return build_context(company, sources, prior, extra, agent_brief(settings().prompt_version, agent_n)), company, sources
 
 
 def _failed_agents(audit_id: str) -> list[int]:

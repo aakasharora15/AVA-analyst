@@ -6,8 +6,9 @@ from types import SimpleNamespace
 from ava_server.config import AGENTS
 
 
-def agent_of(system) -> int:
-    text = system[0]["text"] if isinstance(system, list) else system
+def agent_of(messages) -> int:
+    content = messages[0]["content"]
+    text = content if isinstance(content, str) else "\n".join(b["text"] for b in content)
     for a in reversed(AGENTS):
         if f"You are {a['name']}" in text:
             return a["n"]
@@ -44,7 +45,7 @@ class FakeClient:
     def _create(self, **kw):
         if "tools" in kw:  # research call: no web results in tests
             return SimpleNamespace(content=[], stop_reason="end_turn", model=self.model, usage=SimpleNamespace(iterations=None))
-        n = agent_of(kw["system"])
+        n = agent_of(kw["messages"])
         self.calls.append({"agent": n, **kw})
         queue = self.script.get(n)
         resp = queue.pop(0) if queue else DEFAULT[n]

@@ -94,7 +94,8 @@ def test_orchestrator_failure_fails_the_audit(company, monkeypatch):
 def _override(to):
     def build(kw):
         # Cite the first HIGH finding the Orchestrator was shown.
-        text = kw["messages"][0]["content"]
+        from ava_server.agents import context_text
+        text = context_text(kw["messages"][0]["content"])
         import json, re
         block = text.split("<findings>")[1].split("</findings>")[0]
         ids = [json.loads(l)["id"] for l in block.strip().splitlines() if '"severity": "HIGH"' in l]
@@ -174,7 +175,8 @@ def test_price_delivery_and_competitors_reach_the_agents(company):
     aid = create_audit(company["users"]["Analyst"], company["company"])
     with db.system() as c:
         audit = c.execute("select * from audits where id = %s", (aid,)).fetchone()
-    context, _, _ = _context(audit, 2, [])
+    from ava_server.agents import context_text
+    context = context_text(_context(audit, 2, [])[0])
     assert "Pitchfynd, Unbiased Ventures" in context and "£6 to £11 per drop" in context and '"delivery_mode": "Physical"' in context
     assert audit["input_snapshot"]["company"]["known_competitors"] == "Pitchfynd, Unbiased Ventures"
 
@@ -197,3 +199,19 @@ def test_deep_audit_researches_with_every_attacking_agent(company, monkeypatch):
 
     assert run("standard") == {2: 4, 4: 4, 5: 4}
     assert run("deep") == {1: 8, 2: 8, 3: 8, 4: 8, 5: 8}
+
+
+def test_all_agents_share_one_cacheable_prefix():
+    """System prompt identical for every agent; the company and data room come
+    first in the message, marked for caching; each agent's brief comes after."""
+    from ava_server.agents import build_context, system_prompt
+    from ava_server.config import settings
+    v = settings().prompt_version
+    assert system_prompt(v, 1) == system_prompt(v, 6)
+    co = {"title": "Acme", "description": "d", "industry": "SaaS", "country": "UK", "extra": {}}
+    room = [{"id": "S1", "type": "uploaded", "title": "Deck", "extract": "x"}]
+    found = [{"id": "P1", "type": "public", "title": "Web", "audit_id": "a1", "note": "n"}]
+    one = build_context(co, room, [], brief="You are The Saboteur.")
+    two = build_context(co, room + found, [{"name": "The Saboteur", "output": {}}], brief="You are The Predator.")
+    assert one[0] == two[0] and one[0]["cache_control"] and "Deck" in one[0]["text"]
+    assert "P1" in two[1]["text"] and "You are The Predator." in two[-1]["text"] and "cache_control" not in two[-1]

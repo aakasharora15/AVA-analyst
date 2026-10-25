@@ -58,9 +58,15 @@ def load_prompt(version: str, name: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def system_prompt(version: str, agent_n: int) -> str:
-    agent = AGENTS[agent_n - 1]
-    return load_prompt(version, "_shared") + "\n\n" + load_prompt(version, agent["id"])
+def system_prompt(version: str, agent_n: int | None = None) -> str:
+    """The rules every agent shares. Identical for all six agents, so the
+    model provider caches it once per audit; each agent's own brief goes in
+    the message (see build_context)."""
+    return load_prompt(version, "_shared")
+
+
+def agent_brief(version: str, agent_n: int) -> str:
+    return load_prompt(version, AGENTS[agent_n - 1]["id"])
 
 
 # ---------------------------------------------------------------------------
@@ -171,25 +177,41 @@ def company_fields(company: dict) -> dict:
     return out
 
 
-def build_context(company: dict, sources: list[dict], prior: list[dict], extra: str = "") -> str:
-    parts = ["<company>", json.dumps(company_fields(company), ensure_ascii=False, indent=1), "</company>"]
-    parts.append("<sources>")
-    if sources:
-        for s in sources:
-            parts.append(json.dumps({"id": s["id"], "type": s["type"], "title": s["title"], "kind": s.get("kind"),
-                                     "date": str(s.get("date") or ""), "url": s.get("url"),
-                                     "extract": (s.get("extract") or s.get("note") or "")[:6000]}, ensure_ascii=False))
-    else:
-        parts.append("No sources supplied.")
-    parts.append("</sources>")
+CACHE = {"type": "ephemeral"}
+
+
+def _source_line(s: dict) -> str:
+    return json.dumps({"id": s["id"], "type": s["type"], "title": s["title"], "kind": s.get("kind"),
+                       "date": str(s.get("date") or ""), "url": s.get("url"),
+                       "extract": (s.get("extract") or s.get("note") or "")[:6000]}, ensure_ascii=False)
+
+
+def build_context(company: dict, sources: list[dict], prior: list[dict], extra: str = "", brief: str = "") -> list[dict]:
+    """The agent's message, as content blocks ordered from most to least stable
+    so all six agents share a cached prefix: the company and its data room,
+    then sources found during this audit, then this agent's brief and the
+    reports before it."""
+    stable = [s for s in sources if not s.get("audit_id")]
+    found = [s for s in sources if s.get("audit_id")]
+    head = ["<company>", json.dumps(company_fields(company), ensure_ascii=False, indent=1), "</company>", "<sources>"]
+    head += [_source_line(s) for s in stable] or ([] if found else ["No sources supplied."])
+    blocks = [{"type": "text", "text": "\n".join(head), "cache_control": CACHE}]
+    if found:
+        blocks.append({"type": "text", "text": "\n".join(_source_line(s) for s in found), "cache_control": CACHE})
+    tail = ["</sources>"]
+    if brief:
+        tail += ["<your_brief>", brief.strip(), "</your_brief>"]
     for p in prior:
-        parts.append(f"<report agent=\"{p['name']}\">")
-        parts.append(json.dumps(p["output"], ensure_ascii=False))
-        parts.append("</report>")
+        tail += [f"<report agent=\"{p['name']}\">", json.dumps(p["output"], ensure_ascii=False), "</report>"]
     if extra:
-        parts.append(extra)
-    parts.append("Return your report as JSON matching the schema.")
-    return "\n".join(parts)
+        tail.append(extra)
+    tail.append("Return your report as JSON matching the schema.")
+    blocks.append({"type": "text", "text": "\n".join(tail)})
+    return blocks
+
+
+def context_text(blocks: list[dict] | str) -> str:
+    return blocks if isinstance(blocks, str) else "\n".join(b["text"] for b in blocks)
 
 
 # ---------------------------------------------------------------------------
@@ -207,7 +229,7 @@ class AgentRunner:
                 betas=["server-side-fallback-2026-07-01"], fallbacks="default", **kwargs)
         return self.client.messages.create(**kwargs)
 
-    def run(self, agent_n: int, context: str, model: str | None = None) -> AgentResult:
+    def run(self, agent_n: int, context: list[dict] | str, model: str | None = None) -> AgentResult:
         started = time.monotonic()
         schema = agent_schema(agent_n)
         try:

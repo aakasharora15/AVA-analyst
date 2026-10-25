@@ -4,7 +4,7 @@ import { humanCheckOn, mountHumanCheck } from '../lib/turnstile.js';
 import { inputProblem } from '../data/shared.js';
 import { BUSINESS, contactHref } from '../content/business.js';
 import { AGENTS } from '../engine/config.js';
-import { meter, sevTag, vClass, icon } from '../components/ui.js';
+import { meter, sevTag, vClass, icon, ADVICE_NOTE } from '../components/ui.js';
 import { toast } from '../components/sheet.js';
 import { INDUSTRIES } from './new-analysis.js';
 
@@ -35,7 +35,8 @@ function resultView(r) {
 <form class="card card-pad stack-sm" data-send novalidate>
   <b>Founder? Send this result to an investor.</b>
   <div class="fa-send"><div class="fld"><label for="fa-inv">Investor email</label><input id="fa-inv" type="email" class="inp" autocomplete="off"></div><button type="submit" class="btn">Send result</button></div>
-</form>`;
+</form>
+<p class="xsmall muted">${ADVICE_NOTE}</p>`;
 }
 
 function inboxView(to) {

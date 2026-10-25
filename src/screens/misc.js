@@ -261,6 +261,11 @@ export const trust = longPage({
       <li>Each month, AVA re-runs a sample of past audits on their original inputs to check that scores stay consistent.</li>
       <li>If consistency drifts beyond set limits, new verdicts are automatically marked Under review until the cause is fixed and confirmed by two reviewers.</li>
     </ul>`],
+    ['What a verdict is, and is not', html`<ul>
+      <li>A verdict is an automated opinion on the material supplied and the public sources found. It is not a statement of fact about a company or its people, and it is not investment, financial or legal advice.</li>
+      <li>Every finding shows its evidence. Anyone in your team can challenge a finding with evidence; a challenge is recorded and answered, and the original score is never quietly changed.</li>
+      <li>Scores are for the organisation that ran the audit. Shared reports are watermarked with the recipient and can be revoked.</li>
+    </ul>`],
     ['Reporting a concern', html`<p>${BUSINESS.privacyEmail ? html`Email <a class="link" href="mailto:${BUSINESS.privacyEmail}">${BUSINESS.privacyEmail}</a> about any security or data concern.` : html`Contact the AVA Verdict team about any security or data concern.`} We investigate every report.</p>`],
   ],
 });
