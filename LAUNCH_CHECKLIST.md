@@ -19,9 +19,9 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] 1.14 Apply migration 6 (supabase/migrations/20261024000003_trial.sql): free trial for new organisations (2026-10-24)
 - [x] 1.13 Apply migration 5 (supabase/migrations/20261024000002_plans_deep_audit.sql): Deep audit flag, plan ids, plans change only through billing (2026-10-24)
 - [x] 1.12 Apply migration 4 (supabase/migrations/20261024000001_hide_model.sql): users can no longer read which AI model ran an audit (2026-10-24)
-- [ ] 1.15 Apply migration 7 (supabase/migrations/20261025000001_billing.sql): billing columns, trial end system-only, free audit address limits. Needed before the free audit works on the live site
-- [ ] 1.16 Apply migration 8 (supabase/migrations/20261025000002_mfa.sql): two-factor enforced in the database
-- [ ] 1.18 Apply migration 9 (supabase/migrations/20261025000003_metrics.sql): Enterprise verified metrics. Then verify_setup.sql: 29 tables, 40 policies, all PASS
+- [x] 1.15 Apply migration 7 (supabase/migrations/20261025000001_billing.sql): billing columns, trial end system-only, free audit address limits. Needed before the free audit works on the live site
+- [x] 1.16 Apply migration 8 (supabase/migrations/20261025000002_mfa.sql): two-factor enforced in the database
+- [x] 1.18 Apply migration 9 (supabase/migrations/20261025000003_metrics.sql): Enterprise verified metrics. Then verify_setup.sql: 29 tables, 40 policies, all PASS
 - [ ] 1.17 Authentication → Multi-Factor: confirm TOTP (authenticator app) is enabled (on by default)
 - [~] 1.10 Google sign-in: Google Cloud project "ava-verdict" (dedicated AVA Verdict account), OAuth client "AVA Verdict staging" (External, Testing), Supabase Google provider saved. Remaining: rotate the secret exposed in a screenshot, test once the site URL is set
 - [ ] 1.11 Microsoft sign-in (recommended over Apple for funds and corporates; awaiting decision)
@@ -84,6 +84,8 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [ ] 7.3 Switch production to live; first pilot client
 
 ## Log
+
+- 2026-10-25: Migrations 7, 8 and 9 applied; verify_setup all PASS. Owner's personal organisation (aakasharoraa4@gmail.com) set to Pro Max by hand, no billing; change when the owner switches account.
 
 - 2026-10-25: Enterprise verified metrics: monthly founder reporting, client confirmation, AVA review queue, portfolio runway and freshness, alerts on material moves. Tracking is a per-plan flag in config/plans.json (Enterprise only).
 
