@@ -58,3 +58,20 @@ def test_free_audit_result_goes_by_email_when_email_is_on(api, monkeypatch):
     with db.system() as c:
         mail = c.execute("select subject, body from email_outbox where kind = 'free-audit-result' and to_email = %s", (email,)).fetchone()
     assert mail and "score" in mail["subject"] and f"/free-audit/result/{fid}" in mail["body"]
+
+
+def test_failed_email_is_retried(api, monkeypatch):
+    """A send that fails (say, domain not yet verified) is retried on the next run."""
+    from ava_server import emailer
+    monkeypatch.setenv("RESEND_API_KEY", "re_test")
+    with db.system() as c:
+        c.execute("delete from email_outbox where sent_at is null")
+        c.execute("insert into email_outbox (to_email, subject, body, kind) values ('a@b.example', 'Hi', 'Body', 'test')")
+    fail = lambda *a, **k: (_ for _ in ()).throw(httpx.ConnectError("domain not verified"))
+    monkeypatch.setattr(httpx, "post", fail)
+    assert emailer.send_pending()["failed"] == 1
+    ok = lambda url, **k: httpx.Response(200, json={"id": "x"}, request=httpx.Request("POST", url))
+    monkeypatch.setattr(httpx, "post", ok)
+    assert emailer.send_pending()["sent"] == 1
+    with db.system() as c:
+        assert c.execute("select sent_at, error from email_outbox where subject = 'Hi'").fetchone()["error"] is None

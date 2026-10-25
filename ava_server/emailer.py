@@ -26,7 +26,11 @@ def send_pending(limit: int = 50) -> dict:
     s = settings()
     sent = failed = 0
     with db.system() as c:
-        rows = c.execute("select * from email_outbox where sent_at is null and (error is null or error = 'retry') "
+        # A failed send is stored as "retry: <reason>" and tried again on later
+        # runs for two days (for example while a sending domain is still being
+        # verified). Rows queued while no provider was configured stay as they are.
+        rows = c.execute("select * from email_outbox where sent_at is null and (error is null or "
+                         "(error like 'retry:%%' and created_at > now() - interval '2 days')) "
                          "order by id limit %s for update skip locked", (limit,)).fetchall()
         for r in rows:
             if not s.resend_api_key:
