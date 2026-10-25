@@ -1,5 +1,5 @@
 import { html } from '../lib/html.js';
-import { MODE, DEMO, getCompanies, getOrg, importCompanies, existingTitles, can, effectiveCadence } from '../data/repo.js';
+import { MODE, DEMO, getCompanies, getOrg, getUsers, getOutcomeRows, importCompanies, existingTitles, can, effectiveCadence } from '../data/repo.js';
 import { fmtDate, verdictTag, deltaText, deltaClass, vClass, TYPE_LABEL, segmented, icon } from '../components/ui.js';
 import { openSheet, toast } from '../components/sheet.js';
 import { DIRECTIVES, VENTURE_TYPES } from '../engine/config.js';
@@ -217,16 +217,50 @@ function openImport(ctx) {
 
 // ---------------------------------------------------------------------------
 
+// "Get to a verdict you trust": the first-run checklist. The last step, an
+// outcome for a deal already decided, is what calibrates AVA over time.
+const SETUP_KEY = (orgId) => `setup-dismissed:${orgId}`;
+
+function setupSteps(companies, users, outcomes) {
+  return [
+    { done: companies.some((c) => c.auditCount > 0), title: 'Run your first audit', body: 'Start with a deal whose outcome you already know. It is the quickest way to judge whether AVA sees what you saw.', href: '/new-analysis', cta: 'Run an audit' },
+    { done: companies.some((c) => c.fileCount > 0), title: 'Add the evidence', body: 'Upload the deck, model or board pack. Findings then cite the page they come from.', href: companies[0] ? `/data-room?company=${companies[0].id}` : '/new-analysis', cta: 'Open the data room' },
+    { done: users.filter((u) => u.status === 'active').length > 1, title: 'Bring in a colleague', body: 'A second reader catches what one person misses. Viewers can read and comment without running audits.', href: '/account?tab=team', cta: 'Invite' },
+    { done: companies.some((c) => c.auditCount > 1), title: 'Re-audit after new numbers', body: 'The second audit shows which way risk is moving, and alerts start from there.', href: companies[0] ? `/company/${companies[0].id}` : '/new-analysis', cta: 'Open a company' },
+    { done: outcomes.some((o) => o.outcome), title: 'Log an outcome you know', body: 'Tell AVA what happened to a past deal. Every outcome sharpens how well its scores predict.', href: '/outcomes', cta: 'Log an outcome' },
+  ];
+}
+
+function setupCard(steps, { compact }) {
+  const done = steps.filter((x) => x.done).length;
+  const next = steps.find((x) => !x.done);
+  return html`<section class="card card-pad stack-md pf-setup${compact ? ' pf-setup-compact' : ''}" aria-labelledby="setup-title">
+  <div class="r-sec-head"><h2 id="setup-title" class="card-title">Get to a verdict you trust</h2><span class="small muted">${done} of ${steps.length} done</span>${compact ? html`<button type="button" class="link-btn small" data-setup-hide>Hide</button>` : ''}</div>
+  <div class="ac-meter" role="img" aria-label="${done} of ${steps.length} steps done"><span style="width:${Math.round((done / steps.length) * 100)}%"></span></div>
+  <ol class="pf-setup-list">${steps.map((x) => html`<li class="${x.done ? 'is-done' : x === next ? 'is-next' : ''}">
+    <span class="pf-setup-mark" aria-hidden="true">${x.done ? icon('check', { size: 16 }) : ''}</span>
+    <span class="stack-sm"><b>${x.title}</b>${x.done ? html`<span class="sr-only">Done.</span>` : html`<span class="small muted">${x.body}</span>`}</span>
+    ${x.done ? '' : html`<a class="btn${x === next ? ' btn-primary' : ''}" href="${x.href}">${x.cta}</a>`}
+  </li>`)}</ol>
+</section>`;
+}
+
 export default {
   title: 'Portfolio · AVA',
   className: 'portfolio',
 
   async load() {
     const [companies, org] = await Promise.all([getCompanies(), getOrg()]);
-    return { companies, org };
+    let steps = null;
+    if (!loadPref(SETUP_KEY(org.id), false) && !(MODE === 'mock' && !DEMO)) {
+      const [users, outcomes] = await Promise.all([getUsers(), companies.some((c) => c.auditCount > 0) ? getOutcomeRows() : []]);
+      steps = setupSteps(companies, users, outcomes);
+      if (steps.every((x) => x.done)) steps = null;
+    }
+    return { companies, org, steps };
   },
 
-  render(ctx, { companies, org }) {
+  render(ctx, { companies, org, steps }) {
     const pref = loadPref('portfolio', { filter: 'ALL', sort: 'score', type: 'all', view: 'list' });
     const empty = (MODE === 'mock' && !DEMO && pref.view === 'empty') || companies.length === 0;
     const scored = companies.filter((c) => c.latest);
@@ -240,7 +274,7 @@ export default {
 
     return html`
 <div class="page-head">
-  <div class="page-head-copy"><h1 class="page-title">Portfolio risk overview</h1><p class="muted page-sub">Every monitored company, its current verdict and which way it is moving. Sample data.</p></div>
+  <div class="page-head-copy"><h1 class="page-title">Portfolio risk overview</h1><p class="muted page-sub">Every monitored company, its current verdict and which way it is moving.${MODE === 'mock' ? ' Sample data.' : ''}</p></div>
   <div class="row-actions">
     ${can('runAudits') ? html`<button type="button" class="btn" data-import>${icon('upload', { size: 18 })}Import CSV</button>` : ''}
     ${MODE === 'mock' && !DEMO ? segmented('view', [{ key: 'list', label: 'Populated' }, { key: 'empty', label: 'First use' }], empty ? 'empty' : 'list', { label: 'Preview state' }) : ''}
@@ -253,12 +287,12 @@ ${empty ? html`
     <p class="muted">Add a company to run its first audit, or import your portfolio from a CSV. Every later audit is stored as a dated snapshot, so you can see how its risk moves over time.</p>
     <div class="row-actions"><a class="btn btn-primary btn-lg" href="/new-analysis">Run the first audit</a><button type="button" class="btn btn-lg" data-import>Import a CSV</button></div>
   </div>
-  <ol class="pf-steps">
+  ${steps ? setupCard(steps, { compact: false }) : html`<ol class="pf-steps">
     <li class="card"><span class="lbl">01</span><span><b>Describe the company.</b><br><span class="muted small">Five required fields. More detail gives a sharper audit.</span></span></li>
     <li class="card"><span class="lbl">02</span><span><b>Six agents attack it in sequence.</b><br><span class="muted small">Each reads the findings before it. Typical run time is a few minutes.</span></span></li>
     <li class="card"><span class="lbl">03</span><span><b>Read the verdict, then re-audit.</b><br><span class="muted small">Comparison needs two audits, so the first one sets the baseline.</span></span></li>
-  </ol>
-</section>` : html`
+  </ol>`}
+</section>` : html`${steps ? setupCard(steps, { compact: true }) : ''}
 <section aria-label="Portfolio at a glance" class="pf-glance">
   <div class="hero-panel pf-mix">
     <div class="stars" aria-hidden="true"></div>
@@ -301,6 +335,10 @@ ${empty ? html`
     };
     const ac = new AbortController();
     const opts = { signal: ac.signal };
+    root.querySelector('[data-setup-hide]')?.addEventListener('click', async () => {
+      savePref(SETUP_KEY((await getOrg()).id), true);
+      ctx.refresh();
+    }, opts);
     root.addEventListener('click', (e) => {
       const f = e.target.closest('[data-filter]');
       if (f) set({ filter: f.dataset.filter });

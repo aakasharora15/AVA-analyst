@@ -35,7 +35,17 @@ def verify_token(token: str) -> str:
     sub = claims.get("sub")
     if not sub:
         raise HTTPException(401, "Invalid session")
+    if claims.get("aal") != "aal2" and _has_second_factor(sub):
+        raise HTTPException(401, "Enter the code from your authenticator app to continue.")
     return sub
+
+
+def _has_second_factor(user_id: str) -> bool:
+    from . import db
+    with db.system() as c:
+        if not c.execute("select to_regclass('auth.mfa_factors') as t").fetchone()["t"]:
+            return False
+        return bool(c.execute("select 1 from auth.mfa_factors where user_id = %s and status::text = 'verified'", (user_id,)).fetchone())
 
 
 def current_user(authorization: str = Header(default="")) -> str:

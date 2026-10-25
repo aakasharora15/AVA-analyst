@@ -39,7 +39,7 @@ export default {
   </aside>
   <section class="body" aria-label="Files">
     ${allowed ? html`<div class="card card-pad dr-drop" data-drop tabindex="-1">
-      <div class="stack-sm"><b>Drop decks, metrics or board updates here</b><span class="small muted">PDF, spreadsheet, slides. New files are read before the next audit.</span></div>
+      <div class="stack-sm"><b>Drop decks, metrics or board updates here</b><span class="small muted">PDF, Word, PowerPoint (with speaker notes), Excel or CSV. New files are read before the next audit.</span></div>
       <label class="btn" for="dr-files">Choose files</label>
     </div>` : html`<div class="banner"><b>Your role can view the data room but not upload.</b></div>`}
     ${!sources.length ? emptyState({ title: 'No files yet.', body: 'Upload the deck, financial model and board updates. Findings will cite them, and coverage by topic fills in as AVA reads them.' }) : html`

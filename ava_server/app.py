@@ -779,7 +779,8 @@ def delete_me(body: ConfirmIn, user: str = Depends(current_user)):
 # then registers it here as a source.
 
 
-NO_TEXT_NOTE = "Stored. Text could not be read from this format, so agents will not cite it yet."
+NO_TEXT_NOTE = ("Stored, but no text could be read. Save it as PDF, .docx, .pptx or .xlsx (scanned PDFs need a text layer) "
+                "and upload again so the agents can cite it.")
 
 
 class FileIn(BaseModel):

@@ -140,6 +140,9 @@ export function can(permission, user = ctx?.user) {
 }
 
 export async function getSession() {
+  // Two-factor turned on but this session has not passed it yet: nothing loads
+  // (the database returns no rows) until the code is entered.
+  if (await mfaNeeded()) return { signedIn: true, mfaRequired: true, onboarded: false, userId: null, user: null, org: null };
   const c = await loadContext();
   if (!c) return { signedIn: false, onboarded: false, userId: null, user: null, org: null };
   return { signedIn: true, onboarded: !!c.org, userId: c.user.id, user: c.user, org: c.org };
@@ -212,6 +215,67 @@ export async function signInWithSso(email) {
 }
 
 export async function signOut() { await sb.auth.signOut(); ctx = null; }
+
+/** Ends the session on every device (all refresh tokens revoked). */
+export async function signOutEverywhere() { await sb.auth.signOut({ scope: 'global' }); ctx = null; }
+
+// ---------------------------------------------------------------------------
+// Two-factor (authenticator app, TOTP)
+
+async function mfaNeeded() {
+  const { data: s } = await sb.auth.getSession();
+  if (!s.session) return false;
+  const { data, error } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  return !error && data.currentLevel === 'aal1' && data.nextLevel === 'aal2';
+}
+
+async function verifiedTotp() {
+  const { data, error } = await sb.auth.mfa.listFactors();
+  if (error) fail(error);
+  return (data.totp || []).find((f) => f.status === 'verified') || null;
+}
+
+export async function getMfaStatus() {
+  return { available: true, enabled: Boolean(await verifiedTotp()) };
+}
+
+/** Starts setup: returns the QR code (an SVG data URL) and the secret for manual entry. */
+export async function startMfaSetup() {
+  const { data: list } = await sb.auth.mfa.listFactors();
+  // An abandoned earlier setup blocks a new one: clear it.
+  for (const f of (list?.all || []).filter((x) => x.factor_type === 'totp' && x.status !== 'verified')) {
+    await sb.auth.mfa.unenroll({ factorId: f.id });
+  }
+  const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: `AVA ${new Date().toISOString().slice(0, 10)}` });
+  if (error) fail(error);
+  return { factorId: data.id, qr: data.totp.qr_code, secret: data.totp.secret };
+}
+
+const CODE_ERROR = 'That code did not match. Check the time on your phone and use the newest code.';
+
+export async function confirmMfaSetup(factorId, code) {
+  const { error } = await sb.auth.mfa.challengeAndVerify({ factorId, code: String(code).trim() });
+  if (error) throw new Error(CODE_ERROR);
+  ctx = null;
+}
+
+/** The sign-in step: upgrades this session with a code from the authenticator app. */
+export async function verifyMfa(code) {
+  const f = await verifiedTotp();
+  if (!f) return;
+  const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: f.id, code: String(code).trim() });
+  if (error) throw new Error(CODE_ERROR);
+  ctx = null;
+}
+
+export async function disableMfa() {
+  const f = await verifiedTotp();
+  if (!f) return;
+  const { error } = await sb.auth.mfa.unenroll({ factorId: f.id });
+  if (error) fail(error, 'Enter a fresh code first, then try again.');
+  await sb.auth.refreshSession();
+  ctx = null;
+}
 
 export async function completeOnboarding(answers) {
   const c = await loadContext();
@@ -576,12 +640,14 @@ export async function getSources(companyId) {
   }));
 }
 
-// Text the agents read. PDFs are parsed in the browser with pdf.js (loaded
-// only when needed); text formats are read directly. Other formats are stored
-// and listed but contribute no text until server-side extraction is added.
+// Text the agents read, extracted in the browser: PDFs with pdf.js, Word,
+// PowerPoint and Excel with the Office reader (both loaded only when needed),
+// text formats directly. Legacy .doc/.ppt/.xls and scanned PDFs are stored
+// but contribute no text.
 async function extractText(file) {
   const name = file.name.toLowerCase();
   if (/\.(txt|csv|md|json)$/.test(name)) return (await file.text()).slice(0, 400000);
+  if (/\.(docx|pptx|xlsx)$/.test(name)) return (await import('../lib/office-text.js')).officeText(file);
   if (name.endsWith('.pdf')) {
     const [pdfjs, worker] = await Promise.all([import('pdfjs-dist'), import('pdfjs-dist/build/pdf.worker.min.mjs?url')]);
     pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
@@ -597,6 +663,8 @@ async function extractText(file) {
   return '';
 }
 
+const NO_TEXT = 'Stored, but no text could be read. Save it as PDF, .docx, .pptx or .xlsx (scanned PDFs need a text layer) and upload again so the agents can cite it.';
+
 export async function uploadFiles(companyId, files) {
   const { org } = await need();
   const added = [];
@@ -610,7 +678,7 @@ export async function uploadFiles(companyId, files) {
     let text = '';
     try { text = typeof file.arrayBuffer === 'function' ? await extractText(file) : ''; } catch { text = ''; }
     const out = await api(`/data-room/${companyId}/files`, { body: { title: file.name.replace(/\.[^.]+$/, ''), kind: kindOf(file.name), storagePath: path, extract: text } });
-    added.push({ id: out.sourceId, companyId, type: 'uploaded', title: file.name.replace(/\.[^.]+$/, ''), kind: kindOf(file.name), date: todayIso(), reliability: 'Unrated', note: out.extracted ? 'Uploaded to the data room. Read before the next audit.' : 'Stored. Text could not be read from this format, so agents will not cite it yet.', status: 'read', size: file.size || 0 });
+    added.push({ id: out.sourceId, companyId, type: 'uploaded', title: file.name.replace(/\.[^.]+$/, ''), kind: kindOf(file.name), date: todayIso(), reliability: 'Unrated', note: out.extracted ? 'Uploaded to the data room. Read before the next audit.' : NO_TEXT, status: 'read', size: file.size || 0 });
   }
   return added;
 }

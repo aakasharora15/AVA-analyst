@@ -60,7 +60,7 @@ Mail goes into `email_outbox` first, then out through Resend when `RESEND_API_KE
 
 ## Known limits
 
-- **File text.** PDFs are read in the browser with pdf.js, and text formats are read directly. Scanned PDFs (no text layer), Word, PowerPoint and Excel files are stored but contribute no text yet. The data room says so on upload. Server-side extraction is the next step.
+- **File text.** Read in the browser: PDFs with pdf.js; Word (.docx), PowerPoint (.pptx, including speaker notes) and Excel (.xlsx, every sheet) with `src/lib/office-text.js`; text formats directly. Scanned PDFs without a text layer and legacy .doc/.ppt/.xls are stored, and the data room asks for a readable format.
 - **Live mode testing.** The API, schema, policies and lifecycle are tested against Postgres (`npm run test:api`). The browser's live adapter (`src/data/repo.live.js`) builds and returns the same shapes as the demo layer, but it has not yet been run against a real Supabase project. Do one full walkthrough on staging before inviting clients: sign up, onboard, add a company, run an audit, share, and accept an invite.
 - **Function time.** One agent attempt runs per API call, inside Vercel's 300-second limit. A claim older than 10 minutes counts as a failed attempt and is retried.
 

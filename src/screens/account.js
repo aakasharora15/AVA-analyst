@@ -5,11 +5,12 @@ import {
   getOrg, updateOrg, getUsers, getCurrentUser, updateProfile, inviteMember, changeRole, removeMember, actAs,
   getAuditLog, can, signOut, resetDemo, transferOwnership, MODE,
   getBilling, startCheckout, openBillingPortal, exportOrgData, deleteOrganisation, deleteAccount,
+  getMfaStatus, startMfaSetup, confirmMfaSetup, disableMfa, requestPasswordReset, signOutEverywhere,
 } from '../data/repo.js';
 import { fmtDate, fmtDateTime, emptyState, initials } from '../components/ui.js';
 import { openSheet, toast } from '../components/sheet.js';
 
-const TABS = [['profile', 'Profile'], ['org', 'Organisation'], ['team', 'Team and roles'], ['billing', 'Billing and usage'], ['log', 'Audit log'], ['brand', 'White-label reports']];
+const TABS = [['profile', 'Profile'], ['security', 'Security'], ['org', 'Organisation'], ['team', 'Team and roles'], ['billing', 'Billing and usage'], ['log', 'Audit log'], ['brand', 'White-label reports']];
 const ROLES = ['Admin', 'Analyst', 'Viewer'];
 const ROLE_NOTE = {
   Owner: 'Billing, members, settings, audits, findings, comments, export',
@@ -148,6 +149,22 @@ function billing(o, b, ctx) {
 </div>`;
 }
 
+function security(me, mfa) {
+  return html`<section class="card card-pad stack-md" aria-labelledby="mfa-title">
+  <div class="r-sec-head"><h2 id="mfa-title" class="card-title">Two-factor sign-in</h2><span class="tag ${mfa.enabled ? 'v-proceed verdict' : 'tag-neutral'}">${mfa.enabled ? 'ON' : 'OFF'}</span></div>
+  <p class="muted small">${mfa.enabled
+    ? 'Signing in needs your password or Google account plus a code from your authenticator app. Without the code, AVA shows no data, even to someone who has your password.'
+    : 'Add a code from an authenticator app (Google Authenticator, 1Password, Microsoft Authenticator) to every sign-in. Recommended for anyone who sees deal data.'}</p>
+  <div class="row-actions">${!mfa.available ? html`<span class="hint">Not available in the demo workspace.</span>`
+    : mfa.enabled ? html`<button type="button" class="btn" data-mfa-off>Turn off two-factor</button>` : html`<button type="button" class="btn btn-primary" data-mfa-on>Turn on two-factor</button>`}</div>
+</section>
+<section class="card card-pad stack-md" aria-labelledby="sess-title">
+  <h2 id="sess-title" class="card-title">Password and sessions</h2>
+  <div class="ac-data-row"><div class="stack-sm"><b>Change password</b><span class="small muted">We email a secure link to ${me.email}. Signed in with Google? Your Google account controls your password.</span></div><button type="button" class="btn" data-pw-reset>Email me a link</button></div>
+  <div class="ac-data-row"><div class="stack-sm"><b>Sign out everywhere</b><span class="small muted">Ends every session on every device, including this one. Use it if a device is lost.</span></div><button type="button" class="btn" data-signout-all>Sign out everywhere</button></div>
+</section>`;
+}
+
 function yourData(me) {
   const manager = me.role === 'Owner' || me.role === 'Admin';
   return html`<section class="card card-pad stack-md" aria-labelledby="data-title">
@@ -207,14 +224,16 @@ export default {
 
   async load(ctx) {
     const onBilling = ctx.query.get('tab') === 'billing';
-    const [o, users, me, log, b] = await Promise.all([getOrg(), getUsers(), getCurrentUser(), getAuditLog(), onBilling ? getBilling() : null]);
-    return { o, users, me, log, billing: b };
+    const onSecurity = ctx.query.get('tab') === 'security';
+    const [o, users, me, log, b, mfa] = await Promise.all([getOrg(), getUsers(), getCurrentUser(), getAuditLog(), onBilling ? getBilling() : null, onSecurity ? getMfaStatus() : null]);
+    return { o, users, me, log, billing: b, mfa };
   },
 
   render(ctx, d) {
     const tab = ctx.query.get('tab') || 'profile';
     let body;
     if (tab === 'profile') body = html`${profile(d.me)}${yourData(d.me)}`;
+    else if (tab === 'security') body = security(d.me, d.mfa);
     else if (tab === 'org') body = org(d.o, d.users, d.me);
     else if (tab === 'team') body = team(d.users, d.me);
     else if (tab === 'billing') body = d.me.role === 'Owner' ? billing(d.o, d.billing, ctx) : emptyState({ title: 'Billing is Owner only.', body: `Ask your organisation Owner (${d.users.find((u) => u.role === 'Owner').name}) about plan, usage and invoices.` });
@@ -323,6 +342,45 @@ export default {
           a.click();
           toast('Export downloaded.');
         } catch (err) { toast(err.message); } finally { exp.disabled = false; }
+      }
+      if (e.target.closest('[data-pw-reset]')) {
+        try { await requestPasswordReset(d.me.email); toast(`Reset link sent to ${d.me.email}. It expires in 1 hour.`); } catch (err) { toast(err.message); }
+      }
+      if (e.target.closest('[data-signout-all]')) {
+        try { await signOutEverywhere(); window.location.assign('/sign-in'); } catch (err) { toast(err.message); }
+      }
+      if (e.target.closest('[data-mfa-off]')) {
+        openSheet({
+          title: 'Turn off two-factor?',
+          body: html`<p>Sign-in goes back to your password or Google account alone.</p><span class="err" role="alert" data-mfa-err></span><div class="row-actions"><button type="button" class="btn ac-delete" data-confirm>Turn off</button><button type="button" class="btn" data-close>Cancel</button></div>`,
+          onMount(el, close) {
+            el.querySelector('[data-confirm]').addEventListener('click', async () => {
+              try { await disableMfa(); close(); toast('Two-factor is off.'); ctx.refresh(); } catch (err) { el.querySelector('[data-mfa-err]').textContent = err.message; }
+            });
+          },
+        });
+      }
+      const mfaOn = e.target.closest('[data-mfa-on]');
+      if (mfaOn) {
+        mfaOn.disabled = true;
+        let setup;
+        try { setup = await startMfaSetup(); } catch (err) { toast(err.message); mfaOn.disabled = false; return; }
+        mfaOn.disabled = false;
+        openSheet({
+          title: 'Turn on two-factor',
+          body: html`<ol class="stack-md ac-mfa-steps">
+  <li><b>Scan this code</b> with your authenticator app.<div class="ac-qr"><img src="${setup.qr}" alt="QR code for your authenticator app" width="176" height="176"></div><span class="small muted">Can't scan? Enter this key: <code class="ac-secret">${setup.secret}</code></span></li>
+  <li><b>Enter the 6-digit code</b> the app shows.<form class="row-actions" data-mfa-verify novalidate><label class="sr-only" for="mfa-new">6-digit code</label><input id="mfa-new" class="inp si-code ac-inline" inputmode="numeric" autocomplete="one-time-code" maxlength="6"><button type="submit" class="btn btn-primary">Turn on</button></form><span class="err" role="alert" data-mfa-err></span></li>
+</ol>`,
+          onMount(el, close) {
+            el.querySelector('[data-mfa-verify]').addEventListener('submit', async (ev) => {
+              ev.preventDefault();
+              const code = el.querySelector('#mfa-new').value.trim();
+              if (!/^\d{6}$/.test(code)) { el.querySelector('[data-mfa-err]').textContent = 'Enter the 6 digits from your app.'; return; }
+              try { await confirmMfaSetup(setup.factorId, code); close(); toast('Two-factor is on. You will be asked for a code at each sign-in.'); ctx.refresh(); } catch (err) { el.querySelector('[data-mfa-err]').textContent = err.message; }
+            });
+          },
+        });
       }
       if (e.target.closest('[data-delete-me]')) {
         openSheet({

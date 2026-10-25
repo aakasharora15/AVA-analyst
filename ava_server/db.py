@@ -54,9 +54,11 @@ def system(actor: str = "AVA") -> Iterator[psycopg.Connection]:
 
 
 @contextmanager
-def as_user(user_id: str) -> Iterator[psycopg.Connection]:
+def as_user(user_id: str, aal: str = "aal2") -> Iterator[psycopg.Connection]:
+    # The API checks the second factor before acting (auth.current_user), so its
+    # own calls carry aal2; tests pass aal1 to exercise the database rule.
     with _transaction() as conn:
-        claims = json.dumps({"sub": str(user_id), "role": "authenticated"})
+        claims = json.dumps({"sub": str(user_id), "role": "authenticated", "aal": aal})
         conn.execute("select set_config('request.jwt.claims', %s, true)", (claims,))
         conn.execute("set local role authenticated")
         yield conn

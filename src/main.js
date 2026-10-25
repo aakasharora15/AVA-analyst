@@ -70,6 +70,10 @@ async function render(route, ctx, previous) {
   let session = null;
   if (route.layout === 'app' || route.auth) {
     session = await getSession();
+    if (session.mfaRequired) {
+      ctx.navigate(`/sign-in?state=mfa&next=${encodeURIComponent(ctx.path + window.location.search)}`, { replace: true });
+      return () => {};
+    }
     if (!session.signedIn) {
       ctx.navigate(`/sign-in?next=${encodeURIComponent(ctx.path + window.location.search)}`, { replace: true });
       return () => {};

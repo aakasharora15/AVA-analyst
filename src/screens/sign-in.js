@@ -1,6 +1,6 @@
 import { html } from '../lib/html.js';
 import { PASSWORD_RULE, passwordProblem } from '../data/shared.js';
-import { MODE, DEMO_EMAIL, DEMO_PASSWORD, signIn, signInWithProvider, signUp, getSession, requestPasswordReset, updatePassword, signInWithSso, resendVerification, takeAuthError } from '../data/repo.js';
+import { MODE, DEMO_EMAIL, DEMO_PASSWORD, signIn, signInWithProvider, signUp, getSession, requestPasswordReset, updatePassword, signInWithSso, resendVerification, takeAuthError, verifyMfa, signOut } from '../data/repo.js';
 import { wordmarkSvg } from '../components/logo.js';
 
 // Auth states (spec 4.12), opened with ?state=<name>. In the demo (mock data)
@@ -16,6 +16,7 @@ const STATES = {
   'reset-expired': { title: 'This reset link has expired.', body: 'Reset links last 1 hour. Request a new one to continue.', action: 'Send a new link' },
   'sso-not-configured': { title: 'Single sign-on is not set up for this domain.', body: 'Sign in with your email and password, or ask your organisation Owner to configure single sign-on (Enterprise plan).' },
   'sso-error': { title: 'Single sign-on failed.', body: 'Your identity provider returned an error. Try again, or sign in with your email and password.' },
+  mfa: { title: 'Enter your code.', body: 'Open your authenticator app and enter the 6-digit code for AVA.' },
   'invite-expired': { title: 'This invite has expired.', body: 'Invites last 7 days. Ask the person who invited you to send a new one.' },
 };
 
@@ -27,10 +28,11 @@ function panel(ctx) {
     return html`<div class="si-panel stack-lg">
       <div class="stack-sm"><h2 class="si-title">${s.title}</h2><p class="muted">${s.body}</p></div>
       ${state === 'forgot' ? html`<form class="stack-md" data-forgot novalidate><div class="fld"><label for="fg-email">Work email</label><input id="fg-email" type="email" class="inp" autocomplete="email"></div><button type="submit" class="btn btn-primary">Send reset link</button></form>` : ''}
+      ${state === 'mfa' ? html`<form class="stack-md" data-mfa novalidate><div class="fld"><label for="mfa-code">6-digit code</label><input id="mfa-code" class="inp si-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" aria-describedby="mfa-err"><span class="err" id="mfa-err" data-mfa-err></span></div><button type="submit" class="btn btn-primary">Continue</button></form>` : ''}
       ${state === 'reset' ? html`<form class="stack-md" data-reset novalidate><div class="fld"><label for="rs-pass">New password</label><input id="rs-pass" type="password" class="inp" autocomplete="new-password" minlength="12" aria-describedby="rs-err"><span class="err" id="rs-err" data-rs-err></span></div><button type="submit" class="btn btn-primary">Save password</button></form>` : ''}
       ${s.action ? html`<button type="button" class="btn" data-resend>${s.action}</button>` : ''}
       <span class="err" role="alert" data-state-err></span>
-      <a class="link small" href="/sign-in">Back to sign in</a>
+      ${state === 'mfa' ? html`<button type="button" class="link-btn small" data-mfa-out>Use a different account</button>` : html`<a class="link small" href="/sign-in">Back to sign in</a>`}
     </div>`;
   }
   const isIn = mode === 'in';
@@ -85,6 +87,11 @@ export default {
     const opts = { signal: ac.signal };
     const after = async () => {
       const session = await getSession();
+      if (session.mfaRequired) {
+        const next = ctx.query.get('next');
+        ctx.navigate(`/sign-in?state=mfa${next ? `&next=${encodeURIComponent(next)}` : ''}`);
+        return;
+      }
       ctx.navigate(session.onboarded ? (ctx.query.get('next') || '/portfolio') : '/onboarding');
     };
     // Back from Google with an error: say why. Already signed in (a provider
@@ -94,6 +101,7 @@ export default {
     if (returned && errEl) errEl.textContent = `Google sign-in did not complete: ${returned}`;
     const state = ctx.query.get('state');
     if (!returned && !demo && (!state || state === 'verify')) {
+      // (state=mfa is excluded: there the session exists but still needs the code.)
       getSession().then((s) => { if (s.signedIn && !ac.signal.aborted) after(); }).catch(() => {});
     }
     const busy = (f, on) => { const b = f.querySelector('[type="submit"]'); if (b) b.disabled = on; };
@@ -127,6 +135,13 @@ export default {
           err.textContent = ex.message;
         } finally { busy(f, false); }
       }
+      if (f.matches('[data-mfa]')) {
+        const code = f.querySelector('#mfa-code');
+        const err = root.querySelector('[data-mfa-err]');
+        if (!/^\d{6}$/.test(code.value.trim())) { err.textContent = 'Enter the 6 digits from your app.'; code.focus(); return; }
+        busy(f, true);
+        try { await verifyMfa(code.value); await after(); } catch (ex) { err.textContent = ex.message; code.select(); } finally { busy(f, false); }
+      }
       if (f.matches('[data-forgot]')) {
         const email = f.querySelector('#fg-email').value.trim();
         busy(f, true);
@@ -154,6 +169,7 @@ export default {
           if (r && r.signedIn) await after();
         } catch (ex) { if (err) err.textContent = ex.message; }
       }
+      if (e.target.closest('[data-mfa-out]')) { await signOut(); ctx.navigate('/sign-in'); return; }
       if (e.target.closest('[data-sso]')) {
         const email = root.querySelector('#s-email');
         const r = await signInWithSso(email ? email.value.trim() : '');

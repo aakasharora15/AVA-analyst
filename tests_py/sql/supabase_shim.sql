@@ -14,3 +14,9 @@ create table if not exists auth.users (
 );
 grant usage on schema auth to authenticated, service_role;
 grant select on auth.users to service_role;
+create table if not exists auth.mfa_factors (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  factor_type text not null default 'totp',
+  status text not null default 'unverified'
+);

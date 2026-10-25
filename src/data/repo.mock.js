@@ -773,6 +773,12 @@ export async function openBillingPortal() { throw new Error(DEMO_ONLY); }
 export async function exportOrgData() { await wait(); return { exportedAt: new Date().toISOString(), format: 'AVA export v1', organisation: clone(db.org), companies: clone(db.companies), audits: clone(db.audits) }; }
 export async function deleteOrganisation() { throw new Error(DEMO_ONLY); }
 export async function deleteAccount() { throw new Error(DEMO_ONLY); }
+export async function getMfaStatus() { return { available: false, enabled: false }; }
+export async function startMfaSetup() { throw new Error(DEMO_ONLY); }
+export async function confirmMfaSetup() { throw new Error(DEMO_ONLY); }
+export async function verifyMfa() {}
+export async function disableMfa() { throw new Error(DEMO_ONLY); }
+export async function signOutEverywhere() { return signOut(); }
 export async function recordExport(auditId, detail) { log('export.pdf', 'Audit', auditId, detail); persist(); }
 
 // ---------------------------------------------------------------------------
