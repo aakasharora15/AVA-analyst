@@ -26,8 +26,12 @@ let returnError = (() => {
   if (typeof window === 'undefined') return null;
   const params = new URLSearchParams(window.location.search);
   new URLSearchParams(window.location.hash.slice(1)).forEach((v, k) => params.set(k, v));
-  const msg = params.get('error_description') || params.get('error');
-  return msg ? msg.replace(/\+/g, ' ') : null;
+  let msg = params.get('error_description') || params.get('error');
+  if (!msg) return null;
+  try { msg = decodeURIComponent(msg.replace(/\+/g, ' ')); } catch { /* already plain */ }
+  // Never echo provider codes or tokens back onto the page.
+  if (/exchange external code/i.test(msg)) return 'Google did not accept the sign-in. Try again in a minute.';
+  return msg.split(':')[0].trim();
 })();
 
 /** The sign-in error returned by the provider, once. */
