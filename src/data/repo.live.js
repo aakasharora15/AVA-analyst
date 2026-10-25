@@ -595,32 +595,42 @@ async function drive(id) {
   } catch { /* the scheduled job picks it up */ } finally { driving.delete(id); }
 }
 
-const TYPICAL_AGENT_SECONDS = 45;
+const TYPICAL_AGENT_SECONDS = 60; // measured: a six-agent audit takes about 6 minutes
 
 export async function getRun(id) {
   const a = await row(sb.from('audits').select(AUDIT_FULL).eq('id', id).maybeSingle());
   if (!a) return null;
   const done = ['complete', 'partial', 'failed'].includes(a.status);
-  const runs = await rows(sb.from('agent_runs').select('agent, status, retry_count, error_reason, duration_s, started_at').eq('audit_id', id).order('agent'));
+  const [runs, fs, found] = await Promise.all([
+    rows(sb.from('agent_runs').select('agent, status, retry_count, error_reason, duration_s, started_at, finished_at').eq('audit_id', id).order('agent')),
+    rows(sb.from('findings').select('*').eq('audit_id', id)),
+    // Public sources the agents found during this audit, newest last: the live research feed.
+    rows(sb.from('sources').select('id, title, url, created_at').eq('audit_id', id).eq('type', 'public').order('created_at')),
+  ]);
   if (!done) drive(id);
   const now = Date.now();
   const agents = AGENTS.map((ag) => {
     const r = runs.find((x) => x.agent === ag.n) || { status: 'queued', retry_count: 0 };
-    if (r.status === 'complete' || r.status === 'skipped') return { n: ag.n, name: ag.name, state: 'complete', duration: Number(r.duration_s || 0), retried: r.retry_count > 0 };
-    if (r.status === 'failed') return { n: ag.n, name: ag.name, state: 'failed', error: r.error_reason || 'No valid report on both attempts.' };
+    const mine = fs.filter((f) => f.agent === ag.n);
+    const times = { startedAt: r.started_at || null, finishedAt: r.finished_at || null, findings: mine.length, high: mine.filter((f) => f.severity === 'HIGH').length };
+    if (r.status === 'complete' || r.status === 'skipped') return { n: ag.n, name: ag.name, state: 'complete', duration: Number(r.duration_s || 0), retried: r.retry_count > 0, ...times };
+    if (r.status === 'failed') return { n: ag.n, name: ag.name, state: 'failed', error: r.error_reason || 'No valid report on both attempts.', ...times };
     if (r.status === 'working') {
       const t = r.started_at ? (now - new Date(r.started_at).getTime()) / 1000 : 0;
-      return { n: ag.n, name: ag.name, state: r.retry_count > 0 ? 'retrying' : 'working', progress: Math.min(0.95, t / TYPICAL_AGENT_SECONDS) };
+      return { n: ag.n, name: ag.name, state: r.retry_count > 0 ? 'retrying' : 'working', progress: Math.min(0.95, t / TYPICAL_AGENT_SECONDS), ...times };
     }
     if (r.retry_count > 0) return { n: ag.n, name: ag.name, state: 'retrying', progress: 0 };
     return { n: ag.n, name: ag.name, state: 'queued' };
   });
   const start = new Date(a.started_at || a.created_at).getTime();
   const elapsed = Math.max(0, ((a.finished_at ? new Date(a.finished_at).getTime() : now) - start) / 1000);
-  const fs = await rows(sb.from('findings').select('*').eq('audit_id', id));
   const sev = { HIGH: 3, MEDIUM: 2, LOW: 1 };
   const preview = fs.map((f) => mapFinding(f)).sort((x, y) => sev[y.severity] - sev[x.severity]).slice(0, 6);
-  return { audit: mapAudit(a), done, elapsed, total: done ? elapsed : Math.max(elapsed, AGENTS.length * TYPICAL_AGENT_SECONDS), agents, preview };
+  return {
+    audit: mapAudit(a), done, elapsed, total: done ? elapsed : Math.max(elapsed, AGENTS.length * TYPICAL_AGENT_SECONDS), agents, preview,
+    startedAt: a.started_at || a.created_at, typicalAgentSeconds: TYPICAL_AGENT_SECONDS,
+    found: found.map((x) => ({ id: x.id, title: x.title, url: x.url, at: x.created_at })),
+  };
 }
 
 export async function setRunDebug() { return false; }

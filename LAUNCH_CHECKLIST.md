@@ -45,8 +45,8 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] 4.1 Set VITE_AVA_DATA=live and redeploy (2026-10-24)
 - [x] 4.1a Public demo workspace: demo@avaverdict.com / VerdictDemo2026 via the real sign-in screen ("Explore the live demo" pre-fills it); sample data in the visitor's browser only, no database, Claude API or email; exit returns to the landing page (2026-10-24)
 - [~] 4.2 Sign up, verify email, onboard
-- [ ] 4.3 Add a company, upload a PDF, run a full audit on the real Claude API
-- [ ] 4.4 Record cost and run time of one audit
+- [x] 4.3 Add a company, upload a PDF, run a full audit on the real Claude API (2026-10-25: AVA audited itself with the factsheet PDF; 6 of 6 agents, 40 findings, 44 sources, score 35 PIVOT)
+- [x] 4.4 Record cost and run time of one audit (2026-10-25: about 6 minutes, US$1.26 standard engine). Margin per included audit: Basic and Pro £1.50 revenue vs about £1 cost; Pro Max £3. Deep audit cost not yet measured
 - [ ] 4.5 Dismiss a finding, comment, assign an owner
 - [ ] 4.6 Share a report (with password), open it signed out, revoke it
 - [ ] 4.7 Invite a second account, accept, check role limits (Viewer cannot run audits)
@@ -84,6 +84,8 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [ ] 7.3 Switch production to live; first pilot client
 
 ## Log
+
+- 2026-10-25: First real audit: 6 min, US$1.26. Running screen rebuilt so people can see the engine work: live clock and time left, agent pipeline with current step, live activity feed of real events and sources found. Free audits capped at 5 a day by default (AVA_FREE_AUDITS_PER_DAY) to protect a small API budget. One finding came back without a source: to fix.
 
 - 2026-10-25: Migrations 7, 8 and 9 applied; verify_setup all PASS. Owner's personal organisation (aakasharoraa4@gmail.com) set to Pro Max by hand, no billing; change when the owner switches account.
 

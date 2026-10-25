@@ -164,6 +164,50 @@ details[open] > summary .r-sec-toggle::after { content: 'Hide'; }
 .run-list { list-style: none; display: flex; flex-direction: column; gap: .625rem; }
 .run-agent { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr) auto; gap: .75rem; padding: 1.125rem 1.25rem; border-radius: 18px; align-items: start; }
 .run-agent .lbl { padding-top: .3rem; }
+/* Pipeline: numbered nodes joined by a line; the working agent pulses. */
+.run-pipe { position: relative; }
+.run-node { position: relative; width: 2.25rem; height: 2.25rem; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-mono); font-size: .75rem; color: var(--text-label); border: 1.5px solid var(--line-strong); background: var(--surface); }
+.run-complete .run-node { background: var(--proceed); border-color: var(--proceed); color: var(--ground); font-weight: 700; font-size: .9rem; }
+.run-failed .run-node { border-color: var(--kill); color: var(--kill); }
+.run-working .run-node, .run-retrying .run-node { border-color: var(--accent); color: var(--text); }
+.run-working .run-node::after, .run-retrying .run-node::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; animation: run-ping 1.8s ease-out infinite; }
+.run-working, .run-retrying { position: relative; overflow: hidden; }
+.run-working::before, .run-retrying::before { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(169, 159, 255, .09) 50%, transparent 70%); background-size: 250% 100%; animation: run-shimmer 2.6s linear infinite; pointer-events: none; }
+.run-now { display: flex; align-items: center; gap: .5rem; color: var(--accent-ink); font-family: var(--font-mono); font-size: .8125rem; }
+.run-caret { width: .5rem; height: .9rem; background: var(--accent); animation: run-blink 1s steps(2, start) infinite; flex: none; }
+.run-fade { animation: run-in .45s ease-out; }
+/* Hero: radar sweep, live clock and overall progress. */
+.run-hero { align-items: center; gap: 1.5rem 2.5rem; }
+.run-radar { position: relative; width: 8.5rem; height: 8.5rem; flex: none; border-radius: 50%; overflow: hidden; background: radial-gradient(circle, rgba(169, 159, 255, .12), rgba(5, 7, 26, .4) 70%); }
+.run-sweep { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, rgba(169, 159, 255, .55), rgba(169, 159, 255, 0) 70deg, transparent 360deg); animation: run-spin 2.8s linear infinite; }
+.run-ring { position: absolute; border-radius: 50%; border: 1px solid rgba(226, 231, 245, .18); inset: 0; }
+.run-ring.r2 { inset: 22%; }
+.run-ring.r3 { inset: 44%; }
+.run-core { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 700; font-size: 1.125rem; color: var(--text); }
+.run-hero-copy { flex: 1 1 14rem; min-width: 0; }
+.run-clock { font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 3.75rem); font-weight: 700; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.run-total { height: 6px; border-radius: var(--r-pill); background: rgba(5, 7, 26, .55); overflow: hidden; margin-top: .5rem; }
+.run-total span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent-strong), #E4DCFF); transition: width .6s ease; }
+/* Live activity feed: only things that actually happened. */
+.run-live { display: inline-flex; align-items: center; gap: .375rem; color: var(--proceed); font-weight: 600; }
+.run-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--proceed); animation: run-pulse 1.6s ease-in-out infinite; }
+.run-feed { list-style: none; max-height: 17rem; overflow-y: auto; display: flex; flex-direction: column; gap: .125rem; font-family: var(--font-mono); font-size: .8125rem; }
+.run-ev { display: grid; grid-template-columns: 3.25rem minmax(0, 1fr); gap: .75rem; padding: .375rem .25rem; border-bottom: 1px solid var(--line); color: var(--text-muted); }
+.run-ev:first-child { animation: run-in .5s ease-out; }
+.run-ev-t { color: var(--text-label); }
+.run-ev-done span:last-child { color: var(--proceed); }
+.run-ev-fail span:last-child { color: var(--kill); }
+.run-ev-start span:last-child { color: var(--text); }
+.run-ev-src span:last-child { color: var(--sev-low); overflow-wrap: anywhere; }
+@keyframes run-spin { to { transform: rotate(360deg); } }
+@keyframes run-ping { 0% { transform: scale(.85); opacity: .7; } 100% { transform: scale(1.35); opacity: 0; } }
+@keyframes run-shimmer { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+@keyframes run-blink { to { visibility: hidden; } }
+@keyframes run-pulse { 50% { opacity: .35; } }
+@keyframes run-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .run-sweep, .run-working::before, .run-retrying::before, .run-working .run-node::after, .run-retrying .run-node::after, .run-caret, .run-dot, .run-ev:first-child, .run-fade { animation: none; }
+}
 .run-name { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; }
 .run-queued .run-name { color: var(--text-muted); }
 .run-failed .run-name { color: var(--kill); }
@@ -204,4 +248,10 @@ details[open] > summary .r-sec-toggle::after { content: 'Hide'; }
   .r-chain-card { padding: 1rem; }
   .r-chain-card .xsmall { display: none; }
   .r-chain-name { font-size: 1.0625rem; }
+}
+/* Phones: the live clock and feed come first; the agent list follows. */
+@media (max-width: 640px) {
+  .run-results { order: -1; }
+  .run-radar { width: 6rem; height: 6rem; }
+  .run-hero { padding: 1.5rem; }
 }

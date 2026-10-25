@@ -355,22 +355,28 @@ export async function getRun(id) {
   if (!a.plan) return { audit: clone(a), done: true, agents: [] };
   const elapsed = (Date.now() - a.plan.startedAt) / 1000;
   const { steps, total } = timeline(a.plan);
+  const at = (sec) => new Date(a.plan.startedAt + sec * 1000).toISOString();
+  const company = db.companies.find((c) => c.id === a.companyId);
+  const generated = generateFindings(a, company);
   const agents = AGENTS.map((ag) => {
     const mine = steps.filter((s) => s.agent === ag.n);
     const last = mine[mine.length - 1];
     if (elapsed < mine[0].start) return { n: ag.n, name: ag.name, state: 'queued' };
     const current = mine.find((s) => elapsed >= s.start && elapsed < s.end);
+    const times = { startedAt: at(mine[0].start), finishedAt: !current ? at(last.end) : null };
     if (current) {
-      return { n: ag.n, name: ag.name, state: current.attempt === 2 ? 'retrying' : 'working', progress: (elapsed - current.start) / (current.end - current.start) };
+      return { n: ag.n, name: ag.name, state: current.attempt === 2 ? 'retrying' : 'working', progress: (elapsed - current.start) / (current.end - current.start), ...times };
     }
-    if (last.ok) return { n: ag.n, name: ag.name, state: 'complete', duration: mine.reduce((s, x) => s + (x.end - x.start), 0), retried: mine.length > 1 };
+    const own = generated.filter((f) => f.agent === ag.n);
+    if (last.ok) return { n: ag.n, name: ag.name, state: 'complete', duration: mine.reduce((s, x) => s + (x.end - x.start), 0), retried: mine.length > 1, ...times, findings: own.length, high: own.filter((f) => f.severity === 'HIGH').length };
     if (mine.length === 1 && elapsed < last.end + RETRY_SECONDS) return { n: ag.n, name: ag.name, state: 'retrying', progress: 0 };
     return { n: ag.n, name: ag.name, state: 'failed', error: 'Timed out on both attempts. No report returned.' };
   });
   const preview = previewFindings(a, agents);
   const done = elapsed >= total;
   if (done && a.status === 'running') finaliseRun(a);
-  return { audit: clone(a), done, elapsed, total, agents, preview };
+  // The demo does no live research, so it has no sources-found feed.
+  return { audit: clone(a), done, elapsed, total, agents, preview, startedAt: at(0), typicalAgentSeconds: total / AGENTS.length, found: [] };
 }
 
 // Findings shown while the audit runs: those of agents already complete.

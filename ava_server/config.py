@@ -69,7 +69,7 @@ class Settings:
         self.turnstile_secret = env("TURNSTILE_SECRET_KEY", "").strip()
         # Free audit spend limits: per network address per day, and in total per day.
         self.free_audits_per_ip_day = int(env("AVA_FREE_AUDITS_PER_IP_DAY", "2"))
-        self.free_audits_per_day = int(env("AVA_FREE_AUDITS_PER_DAY", "50"))
+        self.free_audits_per_day = int(env("AVA_FREE_AUDITS_PER_DAY", "5"))
         # Error reporting (Sentry) and where operational alerts go.
         self.sentry_dsn = env("SENTRY_DSN", "").strip()
         self.ops_email = env("AVA_OPS_EMAIL", "").strip()
