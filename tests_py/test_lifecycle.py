@@ -163,3 +163,37 @@ def test_agents_run_on_the_audits_recorded_model(company):
     run_to_end(std, AgentRunner(client=client2, cfg=cfg))
     assert {c["model"] for c in client2.calls} == {"claude-sonnet-5-5"}
     assert not any("fallbacks" in c for c in client2.calls)
+
+
+def test_price_delivery_and_competitors_reach_the_agents(company):
+    """Optional form fields are stored in companies.extra; the agents must see them."""
+    from ava_server.lifecycle import _context
+    with db.system() as c:
+        c.execute("update companies set extra = %s where id = %s",
+                  (db.jsonb({"price": "£6 to £11 per drop", "delivery": "Physical", "competitors": "Pitchfynd, Unbiased Ventures"}), company["company"]))
+    aid = create_audit(company["users"]["Analyst"], company["company"])
+    with db.system() as c:
+        audit = c.execute("select * from audits where id = %s", (aid,)).fetchone()
+    context, _, _ = _context(audit, 2, [])
+    assert "Pitchfynd, Unbiased Ventures" in context and "£6 to £11 per drop" in context and '"delivery_mode": "Physical"' in context
+    assert audit["input_snapshot"]["company"]["known_competitors"] == "Pitchfynd, Unbiased Ventures"
+
+
+def test_deep_audit_researches_with_every_attacking_agent(company, monkeypatch):
+    """Deep: agents 1 to 5 research with 8 searches; standard: agents 2, 4, 5 with 4."""
+    calls = {}
+    with db.system() as c:
+        c.execute("update organisations set plan = 'pro-max' where id = %s", (company["org"],))
+
+    def run(depth):
+        calls.clear()
+        r = runner()
+        monkeypatch.setattr(r, "research", lambda n, co, model=None, searches=4: calls.__setitem__(n, searches) or [])
+        aid = create_audit(company["users"]["Analyst"], company["company"], depth=depth)
+        for _ in range(20):
+            if advance(aid, r)["audit"]["status"] in ("complete", "partial", "failed"):
+                break
+        return dict(calls)
+
+    assert run("standard") == {2: 4, 4: 4, 5: 4}
+    assert run("deep") == {1: 8, 2: 8, 3: 8, 4: 8, 5: 8}

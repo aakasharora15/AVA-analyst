@@ -28,7 +28,7 @@ export default {
   <div class="page-head-copy"><span class="lbl">${company.title}</span><h1 class="page-title">Data room</h1><p class="muted page-sub">Everything AVA has read about this company, and which findings rely on it.</p></div>
   <div class="row-actions">${companyPicker(companies, companyId)}${allowed ? html`<label class="btn btn-primary dr-upload" for="dr-files">${icon('upload', { size: 18 })}Upload files</label>` : ''}</div>
 </div>
-<input id="dr-files" type="file" multiple class="sr-only" data-dr-files accept=".pdf,.xlsx,.xls,.csv,.ppt,.pptx,.doc,.docx,.txt">
+<input id="dr-files" type="file" multiple class="sr-only" data-dr-files accept=".pdf,.docx,.pptx,.xlsx,.csv,.txt,.md">
 <div class="split">
   <aside class="side">
     <div class="card card-pad stack-sm">

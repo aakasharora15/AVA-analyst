@@ -1,5 +1,5 @@
 import { html } from '../lib/html.js';
-import { getCompanies, SAMPLE } from '../data/repo.js';
+import { MODE, getCompanies, SAMPLE } from '../data/repo.js';
 import { CATEGORIES } from '../engine/config.js';
 import { TYPE_LABEL, vClass, emptyState } from '../components/ui.js';
 import { companyPicker, mountCompanyPicker } from '../components/company-picker.js';
@@ -25,7 +25,7 @@ export default {
     const cur = companies.find((c) => c.id === companyId);
     const peers = companies.filter((c) => c.type === cur.type && c.latest);
     const head = html`<div class="page-head">
-  <div class="page-head-copy"><span class="lbl">Sample data · ${TYPE_LABEL[cur.type]}s only</span><h1 class="page-title">Benchmarks</h1><p class="muted page-sub">Where a company sits against the rest of your portfolio, by score and by risk category. Only ventures of the same type are compared, because scores are not comparable across types.</p></div>
+  <div class="page-head-copy"><span class="lbl">${MODE === 'mock' ? 'Sample data · ' : ''}${TYPE_LABEL[cur.type]}s only</span><h1 class="page-title">Benchmarks</h1><p class="muted page-sub">Where a company sits against the rest of your portfolio, by score and by risk category. Only ventures of the same type are compared, because scores are not comparable across types.</p></div>
   ${companyPicker(companies, companyId)}
 </div>`;
     if (peers.length < 3 || !cur.latest) {
@@ -33,7 +33,7 @@ export default {
         title: 'Not enough to compare yet.',
         body: `Benchmarks need at least three scored ${TYPE_LABEL[cur.type].toLowerCase()}s. You have ${peers.length}. ${cur.title} is a ${TYPE_LABEL[cur.type].toLowerCase()}, so it is only compared with other ${TYPE_LABEL[cur.type].toLowerCase()}s.`,
         action: { href: '/new-analysis', label: `Audit another ${TYPE_LABEL[cur.type].toLowerCase()}` },
-        secondary: { href: '/benchmarks?company=northline', label: 'See startup benchmarks' },
+        secondary: MODE === 'mock' ? { href: '/benchmarks?company=northline', label: 'See startup benchmarks' } : null,
       })}`;
     }
     const ranked = peers.slice().sort((a, b) => b.latest.score - a.latest.score);

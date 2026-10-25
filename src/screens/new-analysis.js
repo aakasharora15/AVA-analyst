@@ -111,11 +111,11 @@ export default {
     <div class="card card-pad na-files">
       <div class="stack-sm"><b class="strong">Supporting material <span class="lbl">Optional</span></b><span class="hint">Attach decks, metrics or board updates. Findings will cite them.</span><ul class="na-file-list small" data-file-list></ul></div>
       <label class="btn" for="f-files">Choose files</label>
-      <input id="f-files" type="file" multiple class="sr-only" data-files accept=".pdf,.xlsx,.xls,.csv,.ppt,.pptx,.doc,.docx,.txt">
+      <input id="f-files" type="file" multiple class="sr-only" data-files accept=".pdf,.docx,.pptx,.xlsx,.csv,.txt,.md">
     </div>
 
     <div class="card card-pad na-deep">
-      <label class="check"><input type="checkbox" name="depth" value="deep"${deepAllowed ? '' : html` disabled`} aria-describedby="h-deep"><span class="check-copy"><span>Deep audit</span><span class="hint" id="h-deep">${deepAllowed ? 'Extended analysis with more research and longer reasoning. Takes longer than a standard audit.' : html`Extended analysis with more research and longer reasoning. Part of the <a class="link" href="/pricing">Pro Max plan</a>.`}</span></span></label>
+      <label class="check"><input type="checkbox" name="depth" value="deep"${deepAllowed ? '' : html` disabled`} aria-describedby="h-deep"><span class="check-copy"><span>Deep audit</span><span class="hint" id="h-deep">${deepAllowed ? 'A larger model, and all five agents research the web with twice the searches. Takes longer than a standard audit.' : html`A larger model, and all five agents research the web with twice the searches. Part of the <a class="link" href="/pricing">Pro Max plan</a>.`}</span></span></label>
     </div>
 
     <div class="row-actions na-submit">

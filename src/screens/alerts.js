@@ -1,5 +1,5 @@
 import { html } from '../lib/html.js';
-import { getAlerts, getOrg, updateOrg, markAlertRead, markAllAlertsRead, snoozeCompany, unsnoozeCompany, can } from '../data/repo.js';
+import { MODE, getAlerts, getOrg, updateOrg, markAlertRead, markAllAlertsRead, snoozeCompany, unsnoozeCompany, can } from '../data/repo.js';
 import { fmtDate, verdictTag, emptyState } from '../components/ui.js';
 import { alertTitle, TRIGGER_LABEL } from '../components/alert-text.js';
 import { toast } from '../components/sheet.js';
@@ -46,7 +46,7 @@ export default {
     const settings = can('settings');
     return html`
 <div class="page-head">
-  <div class="page-head-copy"><span class="lbl">Sample data</span><h1 class="page-title">Alerts</h1><p class="muted page-sub">Only material movements in a company's risk. Routine audits that change little stay out of this list.</p></div>
+  <div class="page-head-copy">${MODE === 'mock' ? html`<span class="lbl">Sample data</span>` : ''}<h1 class="page-title">Alerts</h1><p class="muted page-sub">Only material movements in a company's risk. Routine audits that change little stay out of this list.</p></div>
   <button type="button" class="btn" data-readall${count('unread') ? '' : html` disabled`}>Mark all as read</button>
 </div>
 <div class="split">

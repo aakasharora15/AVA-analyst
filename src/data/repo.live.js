@@ -556,6 +556,11 @@ async function ensureCompany(input, org) {
       const current = await row(sb.from('companies').select('*').eq('id', input.companyId).single());
       const update = {};
       fields.forEach((k) => { if (input[k] !== undefined && String(input[k]).trim() !== String(current[k] || '')) update[k] = String(input[k]).trim(); });
+      // Price, delivery and competitors live in extra; keep them current too.
+      const extra = { ...(current.extra || {}) };
+      let extraChanged = false;
+      ['delivery', 'price', 'competitors'].forEach((k) => { if (input[k] !== undefined && String(input[k]).trim() !== String(extra[k] || '')) { extra[k] = String(input[k]).trim(); extraChanged = true; } });
+      if (extraChanged) update.extra = extra;
       if (Object.keys(update).length) await rows(sb.from('companies').update({ ...update, updated_at: new Date().toISOString() }).eq('id', input.companyId).select('id'));
     }
     return input.companyId;

@@ -148,9 +148,23 @@ def validate_output(agent_n: int, output: dict) -> None:
 # Context (the user message). Stable parts first so prompt caching can help.
 
 
+# Optional form fields kept in companies.extra, sent under these names.
+EXTRA_FIELDS = (("price", "price_range"), ("delivery", "delivery_mode"), ("competitors", "known_competitors"))
+
+
+def company_fields(company: dict) -> dict:
+    """Everything the person told us about the venture, as the agents see it."""
+    out = {k: company.get(k) for k in ("title", "description", "industry", "country", "city", "model", "target", "type", "budget", "stage")}
+    extra = company.get("extra") or {}
+    for key, name in EXTRA_FIELDS:
+        value = str(extra.get(key) or "").strip()
+        if value:
+            out[name] = value[:2000]
+    return out
+
+
 def build_context(company: dict, sources: list[dict], prior: list[dict], extra: str = "") -> str:
-    parts = ["<company>", json.dumps({k: company.get(k) for k in (
-        "title", "description", "industry", "country", "city", "model", "target", "type", "budget", "stage")}, ensure_ascii=False, indent=1), "</company>"]
+    parts = ["<company>", json.dumps(company_fields(company), ensure_ascii=False, indent=1), "</company>"]
     parts.append("<sources>")
     if sources:
         for s in sources:
@@ -228,7 +242,7 @@ class AgentRunner:
         return AgentResult(output=output, served_model=resp.model, fallback_used=fallback_used,
                            usage=usage, duration_s=round(time.monotonic() - started, 1))
 
-    def research(self, agent_n: int, company: dict, model: str | None = None) -> list[dict]:
+    def research(self, agent_n: int, company: dict, model: str | None = None, searches: int = 4) -> list[dict]:
         """Live public research before an agent runs. Every result becomes a
         registered public Source before any finding may cite it (spec 4.2)."""
         agent = AGENTS[agent_n - 1]
@@ -244,7 +258,7 @@ class AgentRunner:
             try:
                 resp = self.client.messages.create(
                     model=model or self.cfg.model, max_tokens=8000,
-                    tools=[{"type": "web_search_20260209", "name": "web_search", "max_uses": 4}],
+                    tools=[{"type": "web_search_20260209", "name": "web_search", "max_uses": searches}],
                     messages=messages, output_config={"effort": "low"},
                 )
             except anthropic.APIError:

@@ -13,7 +13,7 @@ import json
 from datetime import date, datetime, timezone
 
 from . import db, emailer
-from .agents import AgentError, AgentRunner, build_context
+from .agents import AgentError, AgentRunner, build_context, company_fields
 from .config import AGENTS, CALIBRATION, CALIBRATIONS, SECTIONS, model_for, settings
 from .engine import score_audit, score_excluding_dismissed
 from .plans import check_allowance
@@ -22,6 +22,9 @@ from .rules import checkpoints, evaluate_alerts
 
 STALE_MINUTES = 10
 RESEARCH_AGENTS = (2, 4, 5)
+# Deep audit: every attacking agent researches, with twice the searches.
+DEEP_RESEARCH_AGENTS = (1, 2, 3, 4, 5)
+SEARCHES = {"standard": 4, "deep": 8}
 FREE_ORG = "free-audits"
 
 
@@ -36,7 +39,9 @@ def _now() -> datetime:
 def snapshot(company: dict, sources: list[dict]) -> tuple[dict, str]:
     """Immutable input snapshot and its hash: company fields, data room
     extracts and every source hash (spec 4.0, Drift in production)."""
-    fields = {k: company.get(k) for k in ("title", "description", "industry", "country", "city", "model", "target", "type")}
+    # The hash covers everything the agents are given, so a changed competitor
+    # list or price counts as a changed input.
+    fields = company_fields(company)
     src = sorted(
         ({"id": s["id"], "hash": s.get("content_hash") or hashlib.sha256((s.get("extract") or s.get("note") or s["title"]).encode()).hexdigest()}
          for s in sources),
@@ -164,10 +169,11 @@ def advance(audit_id: str, runner: AgentRunner | None = None, live_research: boo
     runner = runner or AgentRunner()
     research = []
     try:
-        if live_research and agent_n in RESEARCH_AGENTS and audit["trigger"] != "shadow":
+        deep = audit.get("depth") == "deep"
+        if live_research and agent_n in (DEEP_RESEARCH_AGENTS if deep else RESEARCH_AGENTS) and audit["trigger"] != "shadow":
             with db.system() as c:
                 company = c.execute("select * from companies where id = %s", (audit["company_id"],)).fetchone()
-            research = runner.research(agent_n, company, model=audit["model_version"])
+            research = runner.research(agent_n, company, model=audit["model_version"], searches=SEARCHES["deep" if deep else "standard"])
             _register_public_sources(audit, research)
         context, company, sources = _context(audit, agent_n, research)
         result = runner.run(agent_n, context, model=audit["model_version"])

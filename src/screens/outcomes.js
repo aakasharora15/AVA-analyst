@@ -1,5 +1,5 @@
 import { html } from '../lib/html.js';
-import { getOutcomeRows, logOutcome, can } from '../data/repo.js';
+import { MODE, getOutcomeRows, logOutcome, can } from '../data/repo.js';
 import { OUTCOMES, AGREES_WITH, agreementRate } from '../engine/outcomes.js';
 import { OUTCOME_WINDOW } from '../engine/config.js';
 import { fmtDate, verdictTag, emptyState, TYPE_LABEL } from '../components/ui.js';
@@ -75,7 +75,7 @@ export default {
     const filled = rate.counted ? Math.round((rate.agreed / rate.counted) * n) : 0;
     const canLog = can('findingStatus');
     return html`
-<div class="page-head"><div class="page-head-copy"><span class="lbl">Sample data</span><h1 class="page-title">Outcomes</h1><p class="muted page-sub">Record what actually happened after each verdict. AVA compares it with the final directive, so you can see how far to trust it.</p></div></div>
+<div class="page-head"><div class="page-head-copy">${MODE === 'mock' ? html`<span class="lbl">Sample data</span>` : ''}<h1 class="page-title">Outcomes</h1><p class="muted page-sub">Record what actually happened after each verdict. AVA compares it with the final directive, so you can see how far to trust it.</p></div></div>
 <div class="split">
   <aside class="side">
     <div class="hero-panel oc-rate">
