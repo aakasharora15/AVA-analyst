@@ -20,7 +20,7 @@ import logging
 import anthropic
 import jsonschema
 
-from .config import AGENTS, CATEGORIES, DIRECTIVES, FALLBACK_MODEL_PREFIXES, SECTIONS, Settings, settings
+from .config import SUBJECTS, AGENTS, CATEGORIES, DIRECTIVES, FALLBACK_MODEL_PREFIXES, SECTIONS, Settings, settings
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 MAX_PAUSE_CONTINUATIONS = 3
@@ -149,13 +149,21 @@ def validate_output(agent_n: int, output: dict) -> None:
 
 
 # Optional form fields kept in companies.extra, sent under these names.
-EXTRA_FIELDS = (("price", "price_range"), ("delivery", "delivery_mode"), ("competitors", "known_competitors"))
+EXTRA_FIELDS = (("price", "price_range"), ("delivery", "delivery_mode"), ("competitors", "known_competitors"),
+                *((f["key"], f["agentName"]) for f in SUBJECTS["operatingFields"]))
+# Chosen from a list: the agents read the label, not the key.
+LABELLED = (("subject", "what_is_analysed", "subjects"), ("decision", "decision_this_audit_supports", "decisions"),
+            ("relationship", "submitted_by", "relationships"))
 
 
 def company_fields(company: dict) -> dict:
     """Everything the person told us about the venture, as the agents see it."""
     out = {k: company.get(k) for k in ("title", "description", "industry", "country", "city", "model", "target", "type", "budget", "stage")}
     extra = company.get("extra") or {}
+    for key, name, options in LABELLED:
+        label = next((o["label"] for o in SUBJECTS[options] if o["key"] == extra.get(key)), None)
+        if label:
+            out[name] = label
     for key, name in EXTRA_FIELDS:
         value = str(extra.get(key) or "").strip()
         if value:

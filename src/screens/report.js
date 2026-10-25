@@ -1,10 +1,13 @@
 import { html } from '../lib/html.js';
-import { getAudit, getUsers, can, setFindingStatus, setFindingOwner, addComment, createShareLink, revokeShareLink, getCurrentUser } from '../data/repo.js';
+import { getAudit, getUsers, can, setFindingStatus, setFindingOwner, addComment, createShareLink, revokeShareLink, getCurrentUser, challengeFinding, answerChallenge, getQuestions, askQuestion } from '../data/repo.js';
 import { AGENTS, SECTIONS, CATEGORIES, DIRECTIVES } from '../engine/config.js';
 import { fmtDate, fmtDateTime, verdictTag, sevTag, vClass, meter, exposureBar, TYPE_LABEL, icon, deltaText } from '../components/ui.js';
 import { openSheet, toast } from '../components/sheet.js';
+import { SUBJECTS, DECISIONS, labelOf, isOperating, runningMeaning } from '../data/shared.js';
 
 const STATUS = { open: 'Open', accepted: 'Accepted', dismissed: 'Dismissed', resolved: 'Resolved' };
+const CH_STATUS = { open: 'Awaiting answer', upheld: 'Upheld', rejected: 'Rejected' };
+const CH_CLASS = { open: 'st-prev', upheld: 'st-resolved', rejected: 'st-dismissed' };
 
 export function reportText(a) {
   const lines = [
@@ -35,10 +38,11 @@ function citeMarkers(f, a) {
 
 function findingRow(f, a, { compact = false, guest = false } = {}) {
   const prev = a.previouslyDismissed[f.id];
+  const challenged = (a.challenges || []).some((c) => c.findingId === f.id && c.status === 'open');
   return html`<li class="finding st-${f.status}" id="f-${f.id}">
   ${sevTag(f.severity, 'finding-sev')}
   <div class="finding-body">
-    <div class="finding-title"><b>${f.title}</b>${f.status !== 'open' ? html`<span class="status-chip st-${f.status}">${STATUS[f.status]}</span>` : ''}${prev ? html`<span class="status-chip st-prev" title="${prev.reason}">Previously dismissed</span>` : ''}</div>
+    <div class="finding-title"><b>${f.title}</b>${f.status !== 'open' ? html`<span class="status-chip st-${f.status}">${STATUS[f.status]}</span>` : ''}${prev ? html`<span class="status-chip st-prev" title="${prev.reason}">Previously dismissed</span>` : ''}${challenged ? html`<span class="status-chip st-prev">Challenged</span>` : ''}</div>
     ${compact ? '' : html`<p class="finding-text">${f.text}</p>`}
     ${prev && !compact ? html`<p class="hint">Dismissed in an earlier audit: ${prev.reason}</p>` : ''}
     ${f.status === 'dismissed' && f.dismissReason ? html`<p class="hint">Dismissed: ${f.dismissReason}</p>` : ''}
@@ -154,8 +158,10 @@ function whatWouldChange(a) {
   const movers = a.effects.filter((e) => e.movesUpBand);
   const shown = (movers.length ? movers : a.effects).slice(0, 5);
   const next = DIRECTIVES[DIRECTIVES.indexOf(a.baseDirective) + 1];
+  const owner = a.company.relationship === 'owner';
   return html`<section aria-labelledby="wwc-title" class="card card-pad stack-md">
-  <div class="r-sec-head"><h2 id="wwc-title" class="r-h2">What would change this verdict</h2><span class="lbl">Individual effect, not cumulative</span></div>
+  <div class="r-sec-head"><h2 id="wwc-title" class="r-h2">${owner ? 'What to fix first' : 'What would change this verdict'}</h2><span class="lbl">Individual effect, not cumulative</span></div>
+  ${owner ? html`<p class="small">You told AVA you own or founded this business, so these are in the order that would lift the score most. Fix the top one, then re-audit.</p>` : ''}
   <p class="small muted">${next ? (movers.length ? `Resolving any one of these on its own would move the score into ${next}.` : `No single finding moves the score into ${next} on its own. These have the largest individual effect.`) : 'The directive is already PROCEED. These findings have the largest individual effect.'} Effects do not add up, because of averaging and the cap rule.</p>
   <ul class="wwc">
     ${shown.map((e) => {
@@ -235,9 +241,33 @@ function findingSheetBody(f, a, users, me) {
   ${f.comments.length ? html`<ul class="comments">${f.comments.map((c) => html`<li class="inner"><span class="small"><b>${c.by}</b> · <span class="muted">${fmtDateTime(c.at)}</span></span><p>${c.text}</p></li>`)}</ul>` : html`<p class="hint">No comments yet.</p>`}
   ${canComment ? html`<form class="stack-sm" data-comment-form><label for="comment" class="sr-only">Add a comment</label><textarea id="comment" class="inp" rows="2" placeholder="Add a comment" required></textarea><button type="submit" class="btn">Comment</button></form>` : ''}
 </div>
+${challengesBlock(f, a, me, canStatus, canComment)}
 <div class="stack-sm">
   <h3 class="fld-label">History</h3>
   ${f.history.length ? html`<ul class="history small">${[...f.history].reverse().map((h) => html`<li><span class="muted">${fmtDateTime(h.at)}</span> <b>${h.by}</b> ${h.action}${h.detail ? html`: ${h.detail}` : ''}</li>`)}</ul>` : html`<p class="hint">No changes yet. Every change is written to the audit log.</p>`}
+</div>`;
+}
+
+function challengesBlock(f, a, me, canStatus, canComment) {
+  const chs = (a.challenges || []).filter((c) => c.findingId === f.id);
+  return html`<div class="stack-sm">
+  <h3 class="fld-label">Challenges</h3>
+  <p class="hint">Disagree with this finding? Challenge it with evidence. Someone else in your team answers it. The official score never changes; an upheld challenge is a reason to re-audit.</p>
+  ${chs.length ? html`<ul class="comments">${chs.map((c) => html`<li class="inner stack-sm">
+    <span class="small"><b>${c.by}</b> · <span class="muted">${fmtDateTime(c.at)}</span> <span class="status-chip ${CH_CLASS[c.status]}">${CH_STATUS[c.status]}</span></span>
+    <p>${c.claim}</p>
+    ${c.evidence ? html`<p class="small muted">Evidence: ${c.evidence}</p>` : ''}
+    ${c.response ? html`<p class="small">Answer from ${c.respondedBy}: ${c.response}</p>` : ''}
+    ${c.status === 'open' && canStatus && c.authorId !== me.id ? html`<form class="stack-sm" data-answer-form="${c.id}">
+      <label class="sr-only" for="ans-${c.id}">Your answer</label><textarea id="ans-${c.id}" class="inp" rows="2" required placeholder="What you checked and what you found"></textarea>
+      <div class="row-actions"><button type="submit" class="btn" value="upheld">Uphold</button><button type="submit" class="btn" value="rejected">Reject</button></div></form>` : ''}
+  </li>`)}</ul>` : ''}
+  ${canComment ? html`<details class="ch-new"><summary class="link-btn">Challenge this finding</summary>
+    <form class="stack-sm" data-challenge-form>
+      <div class="fld"><label for="ch-claim">What is wrong with it? <span class="req" aria-hidden="true">*</span></label><textarea id="ch-claim" class="inp" rows="2" required maxlength="2000" placeholder="For example: runway is 20 months, not 9"></textarea></div>
+      <div class="fld"><label for="ch-evidence">Evidence</label><textarea id="ch-evidence" class="inp" rows="2" maxlength="4000" placeholder="What shows it: a document in the data room, a figure, a link"></textarea></div>
+      <button type="submit" class="btn">Submit challenge</button>
+    </form></details>` : ''}
 </div>`;
 }
 
@@ -269,6 +299,22 @@ async function openFinding(id, a, ctx) {
           ctx.refresh();
         } catch (err) { toast(err.message); }
       });
+      const reopen = async (msg) => { close(); toast(msg); await ctx.refresh(); openFinding(id, (await getAudit(a.id)), ctx); };
+      const chForm = el.querySelector('[data-challenge-form]');
+      if (chForm) {
+        chForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const claim = chForm.querySelector('#ch-claim').value.trim();
+          if (!claim) return;
+          try { await challengeFinding(a.id, f.id, { claim, evidence: chForm.querySelector('#ch-evidence').value }); await reopen('Challenge recorded.'); } catch (err) { toast(err.message); }
+        });
+      }
+      el.querySelectorAll('[data-answer-form]').forEach((form) => form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const text = form.querySelector('textarea').value.trim();
+        if (!text) return;
+        try { await answerChallenge(form.dataset.answerForm, e.submitter.value, text); await reopen(e.submitter.value === 'upheld' ? 'Challenge upheld.' : 'Challenge rejected.'); } catch (err) { toast(err.message); }
+      }));
       const cform = el.querySelector('[data-comment-form]');
       if (cform) {
         cform.addEventListener('submit', async (e) => {
@@ -358,6 +404,93 @@ async function openShare(a, ctx) {
 }
 
 // ---------------------------------------------------------------------------
+// Ask AVA: questions about this report, answered from this report only.
+
+const suggestions = (a) => (a.company.relationship === 'owner'
+  ? ['What should I fix first?', `Why ${a.finalDirective}, and what would it take to do better?`, 'Explain the biggest risk in plain English.', 'Which findings could I challenge with evidence?']
+  : ['Why this directive?', 'What should I ask the founder?', 'What would move the score most?', 'Which finding rests on the least evidence?']);
+
+function qaItem(q, a) {
+  const cited = (q.findingIds || []).map((id) => a.findings.find((f) => f.id === id)).filter(Boolean);
+  return html`<li class="qa stack-sm">
+  <p class="qa-q"><b>${q.question}</b> <span class="xsmall muted">${q.by} · ${fmtDateTime(q.at)}</span></p>
+  <p class="qa-a">${q.answer}</p>
+  ${cited.length ? html`<p class="xsmall muted">Based on ${cited.map((f, i) => html`${i ? ', ' : ''}<a class="link" href="#f-${f.id}" data-ask-cite>${f.title}</a>`)}</p>` : ''}
+</li>`;
+}
+
+const leftText = (left) => (left == null ? '' : `${left} question${left === 1 ? '' : 's'} left this period.`);
+
+function askBody(a, data) {
+  return html`<p class="small muted">Answers come from this report only, with the findings they rely on. AVA cannot change the score; to dispute a finding, open it and challenge it with evidence.</p>
+<ol class="qa-list" data-qa-list>${data.questions.map((q) => qaItem(q, a))}</ol>
+<div class="chips" data-ask-chips>${suggestions(a).map((t) => html`<button type="button" class="chip-btn" data-ask-chip>${t}</button>`)}</div>
+<form class="stack-sm" data-ask-form>
+  <label for="ask-q" class="fld-label">Your question</label>
+  <textarea id="ask-q" class="inp" rows="2" maxlength="1000" required placeholder="Ask about any finding, the score or what to do next"></textarea>
+  <div class="row-actions"><button type="submit" class="btn btn-primary">Ask AVA</button><span class="xsmall muted" data-ask-left>${leftText(data.left)}</span></div>
+  <span class="err" role="alert" data-ask-err></span>
+</form>`;
+}
+
+async function openAsk(a, first = '') {
+  let data;
+  try { data = await getQuestions(a.id); } catch (err) { toast(err.message); return; }
+  openSheet({
+    title: 'Ask AVA about this report',
+    wide: true,
+    body: askBody(a, data),
+    onMount(el, close) {
+      const form = el.querySelector('[data-ask-form]');
+      const box = form.querySelector('textarea');
+      const list = el.querySelector('[data-qa-list]');
+      const send = async () => {
+        const question = box.value.trim();
+        if (question.length < 2) return;
+        const btn = form.querySelector('[type="submit"]');
+        btn.disabled = true;
+        btn.textContent = 'Thinking…';
+        el.querySelector('[data-ask-err]').textContent = '';
+        try {
+          const out = await askQuestion(a.id, question);
+          list.insertAdjacentHTML('beforeend', String(qaItem(out.question, a)));
+          list.lastElementChild.scrollIntoView({ block: 'nearest' });
+          el.querySelector('[data-ask-left]').textContent = leftText(out.left);
+          box.value = '';
+        } catch (err) {
+          el.querySelector('[data-ask-err]').textContent = err.code === 'question_limit' ? `${err.message} See plans at /pricing.` : err.message;
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Ask AVA';
+        }
+      };
+      form.addEventListener('submit', (e) => { e.preventDefault(); send(); });
+      el.addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-ask-chip]');
+        if (chip) { box.value = chip.textContent; send(); return; }
+        const cite = e.target.closest('[data-ask-cite]');
+        if (cite) {
+          e.preventDefault();
+          close();
+          const t = document.querySelector(cite.getAttribute('href'));
+          const det = t && t.closest('details');
+          if (det) det.open = true;
+          if (t) t.scrollIntoView({ block: 'center' });
+        }
+      });
+      if (first) { box.value = first; send(); } else box.focus();
+    },
+  });
+}
+
+function askCta(a) {
+  return html`<section aria-labelledby="ask-title" class="card card-pad ask-cta">
+  <div class="stack-sm"><h2 id="ask-title" class="r-h2">Ask AVA about this report</h2><span class="small muted">Questions are answered from this report only, citing the findings behind each answer.</span></div>
+  <div class="chips">${suggestions(a).map((t) => html`<button type="button" class="chip-btn" data-ask-open="${t}">${t}</button>`)}</div>
+</section>`;
+}
+
+// ---------------------------------------------------------------------------
 // Citation hover cards
 
 function mountCitations(root, a) {
@@ -416,12 +549,13 @@ ${banners(a)}
       <span class="lbl">Audit ${a.auditNumber} of ${a.auditTotal} · ${fmtDate(a.date)}${a.depth === 'deep' ? ' · Deep audit' : ''}${sample ? ' · Sample data' : ''}</span>
       <h1 class="r-title">${a.company.title}</h1>
       <p class="muted r-desc">${a.company.description}</p>
-      <div class="chips"><span class="tag tag-neutral">${a.company.industry}</span><span class="tag tag-neutral">${[a.company.city, a.company.country].filter(Boolean).join(', ')}</span><span class="tag tag-neutral">${TYPE_LABEL[a.company.type]}</span>${a.company.budget ? html`<span class="tag tag-neutral">${a.company.budget}</span>` : ''}</div>
+      <div class="chips"><span class="tag tag-neutral">${a.company.industry}</span><span class="tag tag-neutral">${[a.company.city, a.company.country].filter(Boolean).join(', ')}</span>${a.company.subject ? html`<span class="tag tag-neutral">${labelOf(SUBJECTS, a.company.subject)}</span>` : ''}<span class="tag tag-neutral">${a.company.decision ? labelOf(DECISIONS, a.company.decision) : TYPE_LABEL[a.company.type]}</span>${a.company.budget ? html`<span class="tag tag-neutral">${a.company.budget}</span>` : ''}</div>
     </div>
     <div class="stack-md ${vClass(a.finalDirective)}">
       <span class="lbl">Directive${a.overridden ? ' · Adjusted by the Orchestrator' : ''}</span>
       <div class="r-directive verdict-text">${a.finalDirective}</div>
       ${directiveScale(a)}
+      ${isOperating(a.company.subject) ? html`<p class="small strong">For a trading business: ${runningMeaning(a.finalDirective)}</p>` : ''}
       <p class="r-rationale">${a.orchestrator?.rationale}</p>
     </div>
     ${coverageRow(a)}
@@ -430,6 +564,7 @@ ${banners(a)}
 </section>
 ${chain(a)}
 <div class="r-two">${whatWouldChange(a)}${trace(a)}</div>
+${guest ? '' : askCta(a)}
 ${agentGroups(a, guest)}
 ${guest ? '' : html`<section aria-label="Next steps" class="hero-panel r-close">
   <div class="stars" aria-hidden="true"></div>
@@ -467,6 +602,7 @@ export default {
 <div class="r-top">
   <nav class="crumbs" aria-label="Breadcrumb"><a href="/portfolio">Portfolio</a><span aria-hidden="true">/</span><a href="/company/${a.companyId}">${a.company.title}</a><span aria-hidden="true">/</span><span>Audit ${fmtDate(a.date)}</span></nav>
   ${a.status === 'failed' ? '' : html`<div class="row-actions">
+    <button type="button" class="btn btn-primary" data-ask-open="">Ask AVA</button>
     <button type="button" class="btn" data-copy>Copy as text</button>
     <button type="button" class="btn" data-share>${icon('share', { size: 18 })}Share</button>
     <a class="btn" href="/export?audit=${a.id}">Download PDF</a>
@@ -482,6 +618,8 @@ ${reportBody(a)}`;
       const fbtn = e.target.closest('[data-finding]');
       if (fbtn) { openFinding(fbtn.dataset.finding, a, ctx); return; }
       if (e.target.closest('[data-share]')) { openShare(a, ctx); return; }
+      const askBtn = e.target.closest('[data-ask-open]');
+      if (askBtn) { openAsk(a, askBtn.dataset.askOpen); return; }
       if (e.target.closest('[data-copy]')) {
         try { await navigator.clipboard.writeText(reportText(a)); toast('Report copied as text.'); } catch { toast('Copy is not available in this browser.'); }
         return;

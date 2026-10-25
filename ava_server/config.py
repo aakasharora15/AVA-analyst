@@ -83,6 +83,10 @@ class Settings:
         )
 
 
+# What is analysed, the decision and who asks (config/subjects.json, shared with the website).
+with open(ROOT / "config" / "subjects.json", encoding="utf-8") as _fh:
+    SUBJECTS = json.load(_fh)
+
 # Plan entitlements (config/plans.json, shared with the website).
 with open(ROOT / "config" / "plans.json", encoding="utf-8") as _fh:
     PLANS_CFG = json.load(_fh)

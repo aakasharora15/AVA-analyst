@@ -85,6 +85,8 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Log
 
+- 2026-10-26: Talking back to a report, and existing businesses. New analysis asks what is analysed (new idea, early-stage startup, operating SME, established company), the decision (invest, launch, expand, campaign, health check) and the person's relationship to it; SMEs get a trading-record section (Companies House number, years trading, revenue, profit, headcount, customer concentration, borrowing). Engine weights still follow the venture type, now derived from the decision [CALIBRATE]. Reports gain Ask AVA (answers from the report only, cited, monthly allowance per plan) and challenges to findings (answered by someone else, never change the score). Owners see "What to fix first". Portfolio gains a risk-by-category heatmap. Needs migration 20261026000001_report_dialogue.sql.
+
 - 2026-10-25: Phase 1 closed. Branded HTML emails (light and dark, following the reader's setting; Gmail always shows light), generated from each email's plain text, which is still sent alongside. Supabase auth emails go through Resend with matching templates. Sentry and Turnstile deferred. Model spend for the phase: US$0.
 
 - 2026-10-25 (strategy doc, section 4): agents now receive price range, delivery mode and known competitors; Deep audit researches with all five agents at 8 searches each; free audit result is emailed as a private link once RESEND_API_KEY is set (until then it shows on the page); free audits older than 12 months are deleted daily unless converted (privacy policy now true); live-mode "Sample data" labels and the Northline link removed; file pickers accept only readable formats.

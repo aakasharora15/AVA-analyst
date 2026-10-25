@@ -1,5 +1,5 @@
 {
-  "_comment": "Plan entitlements, shared by the server (allowances, seats, Deep audit) and the website. Prices and descriptions live in src/content/business.js. null means no fixed limit. dailyAudits: at most this many audits per UK calendar day. tracking: monthly verified company metrics (founder reports, client confirms, AVA verifies).",
+  "_comment": "Plan entitlements, shared by the server (allowances, seats, Deep audit) and the website. Prices and descriptions live in src/content/business.js. null means no fixed limit. dailyAudits: at most this many audits per UK calendar day. tracking: monthly verified company metrics (founder reports, client confirms, AVA verifies). questions: Ask AVA questions per period (the trial, or the calendar month); cost per question not yet measured. [CALIBRATE]",
   "default": "trial",
   "plans": {
     "trial": {
@@ -10,6 +10,7 @@
       "deep": false,
       "trialDays": 7,
       "tracking": false,
+      "questions": 20,
       "dailyAudits": 1
     },
     "basic": {
@@ -18,7 +19,8 @@
       "auditsPer": "month",
       "seats": 1,
       "deep": false,
-      "tracking": false
+      "tracking": false,
+      "questions": 50
     },
     "pro": {
       "name": "Pro",
@@ -26,7 +28,8 @@
       "auditsPer": "month",
       "seats": 3,
       "deep": false,
-      "tracking": false
+      "tracking": false,
+      "questions": 300
     },
     "pro-max": {
       "name": "Pro Max",
@@ -34,7 +37,8 @@
       "auditsPer": "month",
       "seats": 10,
       "deep": true,
-      "tracking": false
+      "tracking": false,
+      "questions": 1000
     },
     "enterprise": {
       "name": "Enterprise",
@@ -42,7 +46,8 @@
       "auditsPer": "month",
       "seats": null,
       "deep": true,
-      "tracking": true
+      "tracking": true,
+      "questions": null
     }
   }
 }

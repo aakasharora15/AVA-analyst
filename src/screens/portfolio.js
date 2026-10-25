@@ -2,7 +2,7 @@ import { html } from '../lib/html.js';
 import { MODE, DEMO, getCompanies, getOrg, getUsers, getOutcomeRows, importCompanies, existingTitles, can, effectiveCadence } from '../data/repo.js';
 import { fmtDate, verdictTag, deltaText, deltaClass, vClass, TYPE_LABEL, segmented, icon } from '../components/ui.js';
 import { openSheet, toast } from '../components/sheet.js';
-import { DIRECTIVES, VENTURE_TYPES } from '../engine/config.js';
+import { DIRECTIVES, VENTURE_TYPES, CATEGORIES } from '../engine/config.js';
 import { INDUSTRIES } from './new-analysis.js';
 import { load as loadPref, save as savePref } from '../lib/storage.js';
 import { tracksMetrics, runwayMonths, metricsStale } from '../data/shared.js';
@@ -39,6 +39,26 @@ function metricsCell(c) {
   return html`<span class="pf-mt"><span class="small ${rw != null && rw < 6 ? 'delta-down' : ''}">${rw != null ? `${rw} mo runway` : 'Runway –'}</span>${stale
     ? html`<span class="tag v-hold verdict">Stale</span>`
     : m.avaStatus === 'verified' ? html`<span class="xsmall muted">Verified</span>` : html`<span class="xsmall muted">${m.confirmed ? 'In AVA review' : 'To confirm'}</span>`}</span>`;
+}
+
+// Where the risk sits across the portfolio: category exposure of each
+// company's latest audit, worst first. Darker means more exposed.
+function heatmap(scored) {
+  if (scored.length < 2) return '';
+  const rows = scored.filter((c) => c.latest.exposure).sort((a, b) => a.latest.score - b.latest.score).slice(0, 15);
+  const worst = Object.fromEntries(CATEGORIES.map((k) => [k, Math.max(...rows.map((c) => c.latest.exposure[k] || 0))]));
+  const hot = CATEGORIES.filter((k) => rows.filter((c) => (c.latest.exposure[k] || 0) >= 65).length >= 2);
+  return html`<section aria-labelledby="heat-title" class="card card-pad stack-md">
+  <div class="r-sec-head"><h2 id="heat-title" class="r-h2">Risk by category</h2><span class="small muted">${hot.length ? `${hot.join(' and ')} exposure is high in two or more companies.` : 'Exposure of each company\'s latest audit, 0 to 100. Higher is worse.'}</span></div>
+  <div class="heat-wrap"><table class="heat">
+    <thead><tr><th scope="col">Company</th>${CATEGORIES.map((k) => html`<th scope="col"><span class="heat-col">${k}</span></th>`)}</tr></thead>
+    <tbody>${rows.map((c) => html`<tr><th scope="row"><a class="link" href="/company/${c.id}">${c.title}</a> <span class="xsmall muted">${c.latest.score}</span></th>${CATEGORIES.map((k) => {
+      const v = c.latest.exposure[k] || 0;
+      return html`<td style="--heat:${(v / 100).toFixed(2)}" class="${v >= 65 ? 'heat-high' : ''}${v === worst[k] && v > 0 ? ' heat-worst' : ''}" aria-label="${c.title}, ${k}: ${v}">${v}</td>`;
+    })}</tr>`)}</tbody>
+  </table></div>
+  ${scored.length > rows.length ? html`<p class="xsmall muted">Showing the ${rows.length} lowest-scoring companies.</p>` : ''}
+</section>`;
 }
 
 function rowsView(rows, org) {
@@ -335,6 +355,8 @@ ${empty ? html`
     <span class="xsmall ${deltaClass(c.delta)}">${deltaText(c.delta)}${c.previous.calibrationVersion !== c.latest.calibrationVersion ? html`<span class="muted"> · different calibration version</span>` : ''}</span>
   </a>`)}</div>
 </section>
+
+${heatmap(scored)}
 
 <section aria-label="Companies" class="stack-md">
   <div class="pf-controls">

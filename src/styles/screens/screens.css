@@ -417,3 +417,12 @@ button.dr-row[aria-pressed='true'] { border-color: rgba(170, 160, 255, .7); }
 .rv-tbl th, .rv-tbl td { vertical-align: middle; }
 .rv-check { justify-content: flex-start; gap: .75rem; }
 .rv-tabs .chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
+
+/* Portfolio: risk by category */
+.heat-wrap { overflow-x: auto; }
+.heat { width: 100%; border-collapse: separate; border-spacing: 3px; font-size: .8125rem; }
+.heat th { text-align: left; font-weight: 600; color: var(--text-soft); padding: .375rem .5rem; white-space: nowrap; }
+.heat thead th { font-size: .75rem; vertical-align: bottom; }
+.heat td { min-width: 3.25rem; text-align: center; padding: .5rem .25rem; border-radius: 8px; font-variant-numeric: tabular-nums; background: rgba(255, 123, 123, calc(var(--heat) * .75)); color: var(--text); }
+.heat td.heat-high { font-weight: 700; }
+.heat td.heat-worst { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5); }

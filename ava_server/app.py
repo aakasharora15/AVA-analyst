@@ -26,7 +26,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import billing, db, drift, emailer, lifecycle, metrics, privacy, scheduling
+from . import ask, billing, db, drift, emailer, lifecycle, metrics, privacy, scheduling
 from .plans import AllowanceReached, audits_today, audits_used, period_start, trial_end
 from .quality import input_problem
 from .auth import cron_guard, current_user, staff_user
@@ -367,6 +367,109 @@ def finding_comment(finding_id: str, body: CommentIn, user: str = Depends(curren
         row = c.execute("insert into comments (finding_id, org_id, author_id, author_name, text) values (%s, %s, %s, %s, %s) returning id, created_at",
                         (finding_id, f["org_id"], user, _profile_name(c, user), body.text.strip())).fetchone()
     return {"id": row["id"], "at": row["created_at"].isoformat()}
+
+
+# ---------------------------------------------------------------------------
+# Talking back to a report: challenges to findings, and Ask AVA.
+# Neither ever changes the official score or directive.
+
+
+def _log(org_id: str, user: str, who: str, action: str, object_type: str, object_id: str, detail: str) -> None:
+    with db.system() as c:
+        c.execute("insert into audit_log (org_id, user_id, who, action, object_type, object_id, detail) values (%s, %s, %s, %s, %s, %s, %s)",
+                  (org_id, user, who, action, object_type, object_id, detail))
+
+
+class ChallengeIn(BaseModel):
+    claim: str = Field(min_length=1, max_length=2000)
+    evidence: str = Field(default="", max_length=4000)
+
+
+@app.post("/api/findings/{finding_id}/challenges")
+def challenge_finding(finding_id: str, body: ChallengeIn, user: str = Depends(current_user)):
+    with db.as_user(user) as c:
+        f = c.execute("select org_id, audit_id, title from findings where id = %s", (finding_id,)).fetchone()
+        if not f:
+            raise HTTPException(404, "Not found")
+        who = _profile_name(c, user)
+        row = c.execute("insert into finding_challenges (org_id, audit_id, finding_id, author_id, author_name, claim, evidence) "
+                        "values (%s, %s, %s, %s, %s, %s, %s) returning id, created_at",
+                        (f["org_id"], f["audit_id"], finding_id, user, who, body.claim.strip(), body.evidence.strip())).fetchone()
+    _log(f["org_id"], user, who, "finding_challenges.insert", "finding_challenges", row["id"], f'Challenged "{f["title"]}"')
+    return {"id": row["id"], "at": row["created_at"].isoformat()}
+
+
+class ChallengeAnswerIn(BaseModel):
+    status: str = Field(pattern="^(upheld|rejected)$")
+    response: str = Field(min_length=1, max_length=4000)
+
+
+@app.post("/api/challenges/{challenge_id}/answer")
+def answer_challenge(challenge_id: str, body: ChallengeAnswerIn, user: str = Depends(current_user)):
+    with db.as_user(user) as c:
+        who = _profile_name(c, user)
+        row = c.execute("update finding_challenges set status = %s, response = %s, responded_by = %s, responded_at = now() "
+                        "where id = %s and author_id <> %s returning org_id", (body.status, body.response.strip(), who, challenge_id, user)).fetchone()
+    if not row:
+        raise HTTPException(403, "Someone other than the person who raised it must answer a challenge, with the Analyst role or above")
+    _log(row["org_id"], user, who, "finding_challenges.update", "finding_challenges", challenge_id, f"Marked a challenge {body.status}")
+    return {"ok": True}
+
+
+def _question_org(user: str, audit_id: str) -> dict:
+    a = _audit_org(audit_id)
+    if not _role(user, a["org_id"]):
+        raise HTTPException(404, "Not found")
+    with db.system() as c:
+        org = c.execute("select id, plan, created_at from organisations where id = %s", (a["org_id"],)).fetchone()
+    return {**a, "org": org}
+
+
+def _question_row(q: dict) -> dict:
+    return {"id": q["id"], "question": q["question"], "answer": q["answer"], "findingIds": q["finding_ids"] or [],
+            "by": q["user_name"], "at": q["created_at"].isoformat(), "status": q["status"]}
+
+
+@app.get("/api/audits/{audit_id}/questions")
+def list_questions(audit_id: str, user: str = Depends(current_user)):
+    a = _question_org(user, audit_id)
+    with db.system() as c:
+        qs = c.execute("select * from report_questions where audit_id = %s and status = 'answered' order by created_at", (audit_id,)).fetchall()
+        limit = ask.allowance(a["org"])
+        left = None if limit is None else max(0, limit - ask.used(c, a["org"]))
+    return {"questions": [_question_row(q) for q in qs], "allowance": limit, "left": left}
+
+
+class QuestionIn(BaseModel):
+    question: str = Field(min_length=2, max_length=1000)
+
+
+@app.post("/api/audits/{audit_id}/questions")
+def ask_question(audit_id: str, body: QuestionIn, user: str = Depends(current_user)):
+    a = _question_org(user, audit_id)
+    with db.system() as c:
+        st = c.execute("select status from audits where id = %s", (audit_id,)).fetchone()["status"]
+        if st not in ("complete", "partial"):
+            raise HTTPException(409, "AVA can answer questions once the report is issued")
+        try:
+            ask.check(c, a["org"])
+        except ask.QuestionLimit as exc:
+            return JSONResponse(status_code=402, content={"error": str(exc), "state": "question_limit"})
+        history = c.execute("select question, answer from report_questions where audit_id = %s and user_id = %s and status = 'answered' "
+                            "order by created_at", (audit_id, user)).fetchall()
+        who = _profile_name(c, user)
+    try:
+        with db.system() as c:
+            out = ask.answer(c, audit_id, body.question.strip(), history)
+    except lifecycle.AgentError as exc:
+        raise HTTPException(502, str(exc)) from exc
+    with db.system() as c:
+        q = c.execute("insert into report_questions (org_id, audit_id, user_id, user_name, question, answer, finding_ids, usage) "
+                      "values (%s, %s, %s, %s, %s, %s, %s, %s) returning *",
+                      (a["org_id"], audit_id, user, who, body.question.strip(), out["answer"], out["finding_ids"], db.jsonb(out["usage"]))).fetchone()
+        limit = ask.allowance(a["org"])
+        left = None if limit is None else max(0, limit - ask.used(c, a["org"]))
+    return {"question": _question_row(q), "left": left}
 
 
 # ---------------------------------------------------------------------------

@@ -26,8 +26,9 @@ HIDDEN = {
     "audits": {"model_version", "served_model", "usage", "output", "snapshot", "snapshot_hash"},
     "invites": {"token"},
     "share_links": {"token", "password_hash"},
+    "report_questions": {"usage"},
 }
-TABLES = ("companies", "audits", "findings", "sources", "comments", "alerts", "outcomes", "share_links", "invites", "import_jobs", "audit_log")
+TABLES = ("companies", "audits", "findings", "sources", "comments", "alerts", "outcomes", "share_links", "invites", "import_jobs", "finding_challenges", "report_questions", "audit_log")
 LIVE_SUBSCRIPTION = ("active", "trialing", "past_due")
 
 

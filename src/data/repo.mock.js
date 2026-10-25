@@ -20,7 +20,7 @@ import { AGENTS, CALIBRATION, CATEGORIES, SECTIONS } from '../engine/config.js';
 import { scoreAudit } from '../engine/score.js';
 import { evaluateAlerts } from '../engine/alerts.js';
 import { checkpoints, outcomeStatus } from '../engine/outcomes.js';
-import { canDeepAudit, inputProblem, roleCan, checkEmailFormat, addDays, computeNextRun as nextRunFor, kindOf, pickAudit, enrichAudit, lockFindings, todayIso } from './shared.js';
+import { canDeepAudit, inputProblem, roleCan, checkEmailFormat, addDays, computeNextRun as nextRunFor, kindOf, pickAudit, enrichAudit, lockFindings, todayIso, EXTRA_KEYS } from './shared.js';
 
 export const MODE = 'mock';
 
@@ -253,6 +253,7 @@ export async function getAudit(id) {
   const sources = db.sources.filter((s) => s.companyId === a.companyId);
   const out = enrichAudit(clone(a), { company: clone(company), sources: clone(sources), issued: clone(auditsFor(a.companyId)) });
   out.shareLinks = clone(db.shareLinks.filter((l) => l.auditId === id));
+  out.challenges = clone((db.challenges || []).filter((c) => c.auditId === id));
   return out;
 }
 
@@ -272,7 +273,7 @@ export async function runAudit(input, { failAgent = null, failRetry = false } = 
   guard('runAudits');
   let company = input.companyId ? db.companies.find((c) => c.id === input.companyId) : null;
   if (company && input.title) {
-    const fields = ['title', 'description', 'industry', 'country', 'city', 'model', 'target', 'type'];
+    const fields = ['title', 'description', 'industry', 'country', 'city', 'model', 'target', 'type', ...EXTRA_KEYS];
     const changed = fields.filter((k) => input[k] !== undefined && String(input[k]).trim() !== String(company[k] || ''));
     if (changed.length) {
       changed.forEach((k) => { company[k] = String(input[k]).trim(); });
@@ -284,7 +285,7 @@ export async function runAudit(input, { failAgent = null, failRetry = false } = 
     company = {
       id: nextId('co'), title: input.title.trim(), description: input.description.trim(), industry: input.industry, country: input.country.trim(),
       city: (input.city || '').trim(), model: (input.model || '').trim(), target: (input.target || '').trim(), type: input.type || 'startup',
-      dealLead: currentUser().name, stage: input.stage || '', fund: '', budget: input.budget || '', delivery: input.delivery || '', price: input.price || '', competitors: input.competitors || '',
+      dealLead: currentUser().name, stage: input.stage || '', fund: '', budget: input.budget || '', ...Object.fromEntries(EXTRA_KEYS.map((k) => [k, String(input[k] || '').trim()])),
       cadence: { mode: 'inherit', paused: false, resumeOn: null, nextRun: null },
       coverage: [{ topic: 'Financials', pct: input.files ? 40 : 0 }, { topic: 'Operations', pct: 0 }, { topic: 'Market and competitors', pct: 0 }, { topic: 'Legal and IP', pct: 0 }, { topic: 'Team', pct: 0 }],
       openItems: [],
@@ -442,6 +443,7 @@ function generateFindings(a, company) {
   }
   const findings = rows.map((f, i) => ({
     ...f, id: `${a.id}-f${i + 1}`, auditId: a.id, status: 'open', owner: null, dismissReason: null, comments: [], history: [],
+    title: String(f.title).replaceAll('{city}', company.city || company.country),
     text: String(f.text).replaceAll('{city}', company.city || company.country),
   }));
   Object.defineProperty(a, '_generated', { value: findings, enumerable: false, configurable: true });
@@ -570,6 +572,66 @@ export async function addComment(auditId, findingId, text) {
   finding.comments.push({ at: nowIso(), by: currentUser().name, text: text.trim() });
   log('finding.comment', 'Finding', findingId, `Commented on "${finding.title}"`);
   persist();
+}
+
+// ---------------------------------------------------------------------------
+// Talking back to a report. Neither changes the official score.
+
+export async function challengeFinding(auditId, findingId, { claim, evidence = '' }) {
+  guard('comment');
+  const { finding } = findFinding(auditId, findingId);
+  const me = currentUser();
+  db.challenges = db.challenges || [];
+  db.challenges.push({ id: nextId('ch'), auditId, findingId, authorId: me.id, by: me.name, claim: claim.trim(), evidence: evidence.trim(), status: 'open', response: '', respondedBy: null, at: nowIso() });
+  log('finding.challenge', 'Finding', findingId, `Challenged "${finding.title}"`);
+  persist();
+}
+
+export async function answerChallenge(challengeId, status, response) {
+  guard('findingStatus');
+  const ch = (db.challenges || []).find((c) => c.id === challengeId);
+  if (!ch) throw new Error('This challenge no longer exists.');
+  if (ch.authorId === currentUser().id) throw new Error('Someone other than the person who raised it must answer a challenge.');
+  Object.assign(ch, { status, response: response.trim(), respondedBy: currentUser().name });
+  log('finding.challenge', 'Finding', ch.findingId, `Marked a challenge ${status}`);
+  persist();
+}
+
+// The sample workspace answers from the report with simple rules, not the AI.
+const SAMPLE_QUESTIONS = 20;
+
+function sampleAnswer(a, question) {
+  const q = question.toLowerCase();
+  const high = a.findings.filter((f) => f.severity === 'HIGH');
+  const name = (f) => `"${f.title}"`;
+  if (/fix|improve|change|raise|better|move/.test(q)) {
+    const top = a.effects.slice(0, 3).map((e) => a.findings.find((f) => f.id === e.findingId));
+    return { answer: `Start with the findings that move the score most. Resolving ${top.map(name).join(', then ')} would each lift the score on its own; ${a.effects[0] ? `the first would take it to ${a.effects[0].score}.` : ''} Effects do not add up, so re-audit after each material fix.`, findingIds: top.map((f) => f.id) };
+  }
+  if (/ask|founder|question|diligence/.test(q)) {
+    const top = high.slice(0, 3);
+    return { answer: `Ask for evidence against the HIGH findings first. ${top.map((f) => `On ${name(f)}: what data shows this risk is smaller than the report says?`).join(' ')}`, findingIds: top.map((f) => f.id) };
+  }
+  const top = high.slice(0, 3);
+  return { answer: `The score is ${a.score} out of 100, which maps to ${a.baseDirective}${a.overridden ? `; the Orchestrator moved it to ${a.finalDirective}` : ''}. ${top.length ? `The verdict rests mainly on ${top.map(name).join(', ')}.` : 'There are no HIGH findings.'} This sample workspace answers from the report with simple rules; signed-in accounts get a full answer from AVA.`, findingIds: top.map((f) => f.id) };
+}
+
+export async function getQuestions(auditId) {
+  await wait();
+  const used = (db.questions || []).length;
+  return { questions: clone((db.questions || []).filter((x) => x.auditId === auditId)), allowance: SAMPLE_QUESTIONS, left: Math.max(0, SAMPLE_QUESTIONS - used) };
+}
+
+export async function askQuestion(auditId, question) {
+  await wait();
+  db.questions = db.questions || [];
+  if (db.questions.length >= SAMPLE_QUESTIONS) { const e = new Error(`The sample workspace includes ${SAMPLE_QUESTIONS} questions and they are used up.`); e.code = 'question_limit'; throw e; }
+  const a = await getAudit(auditId);
+  const { answer, findingIds } = sampleAnswer(a, question);
+  const q = { id: nextId('q'), auditId, question: question.trim(), answer, findingIds, by: currentUser().name, at: nowIso(), status: 'answered' };
+  db.questions.push(q);
+  persist();
+  return { question: clone(q), left: Math.max(0, SAMPLE_QUESTIONS - db.questions.length) };
 }
 
 // ---------------------------------------------------------------------------

@@ -1,0 +1,37 @@
+{
+  "_comment": "What is being analysed, the decision behind the audit and who is asking. Stored on the company (companies.extra). The engine's category weights still come from the venture type, derived from the decision below; weights for operating businesses are not yet calibrated separately. [CALIBRATE]",
+  "subjects": [
+    { "key": "idea", "label": "New idea", "hint": "Not trading yet" },
+    { "key": "early", "label": "Early-stage startup", "hint": "Trading for under two years" },
+    { "key": "sme", "label": "Operating SME", "hint": "Trading, registered, small or medium" },
+    { "key": "established", "label": "Established company", "hint": "Scaled, trading for several years" }
+  ],
+  "decisions": [
+    { "key": "invest", "label": "Invest in or fund it", "type": "startup" },
+    { "key": "launch", "label": "Launch it or enter a market", "type": "startup" },
+    { "key": "expand", "label": "Expand: new product, region or channel", "type": "strategy" },
+    { "key": "campaign", "label": "Run a campaign or initiative", "type": "campaign" },
+    { "key": "health", "label": "Health check, no decision yet", "type": "startup" }
+  ],
+  "relationships": [
+    { "key": "investor", "label": "Investor or adviser" },
+    { "key": "owner", "label": "Founder or owner" },
+    { "key": "other", "label": "Employee, student or other" }
+  ],
+  "operatingFields": [
+    { "key": "chNumber", "label": "Companies House number", "placeholder": "For example 01234567", "agentName": "companies_house_number" },
+    { "key": "yearsTrading", "label": "Years trading", "placeholder": "For example 6", "agentName": "years_trading" },
+    { "key": "revenue", "label": "Annual revenue", "options": ["Under £100,000", "£100,000 to £1m", "£1m to £10m", "£10m to £50m", "£50m+"], "agentName": "annual_revenue" },
+    { "key": "profit", "label": "Profit last year", "options": ["Loss-making", "Around break-even", "Profitable"], "agentName": "profit_last_year" },
+    { "key": "headcount", "label": "Headcount", "placeholder": "For example 24", "agentName": "headcount" },
+    { "key": "topCustomer", "label": "Largest customer's share of revenue", "options": ["Under 10%", "10% to 25%", "25% to 50%", "Over 50%"], "agentName": "largest_customer_share" },
+    { "key": "debt", "label": "Borrowing and debt", "placeholder": "For example £250,000 bank loan, repaid 2028", "agentName": "borrowing" }
+  ],
+  "runningBusiness": {
+    "_comment": "Plain meaning of each directive for a business that already trades.",
+    "PROCEED": "Continue as planned.",
+    "HOLD": "Watch closely and fix the main risks before committing more.",
+    "PIVOT": "Change course: the current plan is unlikely to work as it stands.",
+    "KILL": "Stop or exit this line of business."
+  }
+}

@@ -10,7 +10,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { AGENTS, ALERT_RULES, CATEGORIES, SECTIONS } from '../engine/config.js';
 import { outcomeStatus } from '../engine/outcomes.js';
-import { roleCan, checkEmailFormat, passwordProblem, PASSWORD_RULE, todayIso, addDays, computeNextRun, kindOf, pickAudit, enrichAudit, lockFindings, tracksMetrics } from './shared.js';
+import { roleCan, checkEmailFormat, passwordProblem, PASSWORD_RULE, todayIso, addDays, computeNextRun, kindOf, pickAudit, enrichAudit, lockFindings, tracksMetrics, EXTRA_KEYS } from './shared.js';
 import { load, save } from '../lib/storage.js';
 
 export const MODE = 'live';
@@ -366,7 +366,7 @@ function mapCompany(c) {
   return {
     id: c.id, title: c.title, description: c.description, industry: c.industry, country: c.country, city: c.city, model: c.model,
     target: c.target, type: c.type, dealLead: c.deal_lead, stage: c.stage, fund: c.fund, budget: c.budget,
-    delivery: extra.delivery || '', price: extra.price || '', competitors: extra.competitors || '',
+    ...Object.fromEntries(EXTRA_KEYS.map((k) => [k, extra[k] || ''])),
     cadence: { mode: 'inherit', paused: false, resumeOn: null, ...(c.cadence || {}), nextRun: c.next_run },
     scheduledAudit: c.scheduled_audit, coverage: c.coverage || [], openItems: c.open_items || [], todosDone: c.todos || {},
     updatedAt: c.updated_at,
@@ -532,15 +532,17 @@ export async function getAudits(companyId) {
 export async function getAudit(id) {
   const a = await row(sb.from('audits').select('company_id').eq('id', id).maybeSingle());
   if (!a) return null;
-  const [company, all, sources, links] = await Promise.all([
+  const [company, all, sources, links, challenges] = await Promise.all([
     row(sb.from('companies').select('*').eq('id', a.company_id).single()),
     getAudits(a.company_id),
     rows(sb.from('sources').select('*').eq('company_id', a.company_id)),
     rows(sb.from('share_links').select('token, audit_id, recipient_email, expires_at, has_password, revoked, created_by, created_at, share_views(viewed_at)').eq('audit_id', id)),
+    rows(sb.from('finding_challenges').select('*').eq('audit_id', id).order('created_at')),
   ]);
   const audit = all.find((x) => x.id === id);
   const out = enrichAudit(audit, { company: mapCompany(company), sources: sources.map(mapSource), issued: issuedOnly(all) });
   out.shareLinks = links.map((l) => ({ token: l.token, auditId: l.audit_id, email: l.recipient_email, expires: l.expires_at, passwordSet: l.has_password, revoked: l.revoked, views: (l.share_views || []).map((v) => ({ at: v.viewed_at })), createdAt: l.created_at }));
+  out.challenges = challenges.map((c) => ({ id: c.id, findingId: c.finding_id, authorId: c.author_id, by: c.author_name, claim: c.claim, evidence: c.evidence, status: c.status, response: c.response, respondedBy: c.responded_by, at: c.created_at }));
   return out;
 }
 
@@ -556,17 +558,17 @@ async function ensureCompany(input, org) {
       const current = await row(sb.from('companies').select('*').eq('id', input.companyId).single());
       const update = {};
       fields.forEach((k) => { if (input[k] !== undefined && String(input[k]).trim() !== String(current[k] || '')) update[k] = String(input[k]).trim(); });
-      // Price, delivery and competitors live in extra; keep them current too.
+      // Fields without their own column live in extra; keep them current too.
       const extra = { ...(current.extra || {}) };
       let extraChanged = false;
-      ['delivery', 'price', 'competitors'].forEach((k) => { if (input[k] !== undefined && String(input[k]).trim() !== String(extra[k] || '')) { extra[k] = String(input[k]).trim(); extraChanged = true; } });
+      EXTRA_KEYS.forEach((k) => { if (input[k] !== undefined && String(input[k]).trim() !== String(extra[k] || '')) { extra[k] = String(input[k]).trim(); extraChanged = true; } });
       if (extraChanged) update.extra = extra;
       if (Object.keys(update).length) await rows(sb.from('companies').update({ ...update, updated_at: new Date().toISOString() }).eq('id', input.companyId).select('id'));
     }
     return input.companyId;
   }
   const { user } = await need();
-  const insert = { org_id: org.id, deal_lead: user.name, stage: input.stage || '', budget: input.budget || '', created_by: user.id, extra: { delivery: input.delivery || '', price: input.price || '', competitors: input.competitors || '' } };
+  const insert = { org_id: org.id, deal_lead: user.name, stage: input.stage || '', budget: input.budget || '', created_by: user.id, extra: Object.fromEntries(EXTRA_KEYS.map((k) => [k, String(input[k] || '').trim()])) };
   fields.forEach((k) => { insert[k] = String(input[k] || '').trim(); });
   insert.type = insert.type || 'startup';
   const created = await rows(sb.from('companies').insert(insert).select('id'));
@@ -649,6 +651,16 @@ export async function setFindingStatus(_auditId, findingId, status, reason = '')
 }
 export async function setFindingOwner(_auditId, findingId, owner) { await api(`/findings/${findingId}/owner`, { body: { owner: owner || null } }); }
 export async function addComment(_auditId, findingId, text) { await api(`/findings/${findingId}/comments`, { body: { text: text.trim() } }); }
+
+// Talking back to a report. Neither changes the official score.
+export async function challengeFinding(_auditId, findingId, { claim, evidence = '' }) { await api(`/findings/${findingId}/challenges`, { body: { claim: claim.trim(), evidence: evidence.trim() } }); }
+export async function answerChallenge(challengeId, status, response) { await api(`/challenges/${challengeId}/answer`, { body: { status, response: response.trim() } }); }
+export async function getQuestions(auditId) { return api(`/audits/${auditId}/questions`, { method: 'GET' }); }
+export async function askQuestion(auditId, question) {
+  const out = await api(`/audits/${auditId}/questions`, { body: { question: question.trim() } });
+  if (out.state) { const e = new Error(out.error); e.code = out.state; throw e; }
+  return out;
+}
 
 // ---------------------------------------------------------------------------
 // Sources and data room

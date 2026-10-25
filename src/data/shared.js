@@ -3,6 +3,7 @@
 
 import { CALIBRATION, CALIBRATIONS, SECTIONS } from '../engine/config.js';
 import PLAN_LIMITS from '../../config/plans.json' with { type: 'json' };
+import SUBJECTS_CONFIG from '../../config/subjects.json' with { type: 'json' };
 import { scoreExcludingDismissed, individualEffects, traceByCategory } from '../engine/score.js';
 import { previouslyDismissed } from '../engine/compare.js';
 
@@ -149,3 +150,15 @@ export function lockFindings(findings) {
   const locked = sorted.slice(3);
   return { top: sorted.slice(0, 3), locked: { total: locked.length, HIGH: 0, MEDIUM: 0, LOW: 0, ...Object.fromEntries(['HIGH', 'MEDIUM', 'LOW'].map((s) => [s, locked.filter((f) => f.severity === s).length])) } };
 }
+
+// What is being analysed, why and by whom (config/subjects.json).
+export const SUBJECTS = SUBJECTS_CONFIG.subjects;
+export const DECISIONS = SUBJECTS_CONFIG.decisions;
+export const RELATIONSHIPS = SUBJECTS_CONFIG.relationships;
+export const OPERATING_FIELDS = SUBJECTS_CONFIG.operatingFields;
+export const EXTRA_KEYS = ['delivery', 'price', 'competitors', 'subject', 'decision', 'relationship', ...OPERATING_FIELDS.map((f) => f.key)];
+export const isOperating = (subject) => subject === 'sme' || subject === 'established';
+// The engine's weights follow the venture type; the decision sets it.
+export const typeForDecision = (decision) => (DECISIONS.find((d) => d.key === decision) || {}).type || 'startup';
+export const labelOf = (list, key) => (list.find((x) => x.key === key) || {}).label || '';
+export const runningMeaning = (directive) => SUBJECTS_CONFIG.runningBusiness[directive] || '';
