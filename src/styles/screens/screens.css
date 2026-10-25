@@ -249,6 +249,7 @@ button.dr-row[aria-pressed='true'] { border-color: rgba(170, 160, 255, .7); }
 .ac-plan-buy { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .ac-plan-price { font-weight: 700; font-variant-numeric: tabular-nums; }
 .ac-data-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.ac-data-row > .stack-sm { flex: 1 1 18rem; min-width: 0; }
 .ac-mfa-steps { padding-left: 1.25rem; }
 .ac-mfa-steps li { display: flex; flex-direction: column; gap: .5rem; }
 .ac-qr { align-self: flex-start; padding: .75rem; border-radius: var(--r-sm); background: #fff; line-height: 0; }

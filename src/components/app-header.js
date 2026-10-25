@@ -3,6 +3,7 @@ import { logo } from './logo.js';
 import { icon, fmtDate, verdictTag } from './ui.js';
 import { getAlerts, markAlertRead, markAllAlertsRead, unreadAlertCount, getCurrentUser } from '../data/repo.js';
 import { alertTitle } from './alert-text.js';
+import { openCommand, bindCommandKey } from './command.js';
 
 const NAV = [
   { label: 'Portfolio', href: '/portfolio', match: ['/portfolio', '/company', '/history', '/report', '/running', '/new-analysis'] },
@@ -24,6 +25,7 @@ export function appHeader({ path }) {
     ${logo({ href: '/portfolio', label: 'AVA portfolio' })}
     <nav class="capsule" id="primary-nav" aria-label="Primary">${items}</nav>
     <div class="site-header-end">
+      <button type="button" class="icon-btn cmd-btn" data-cmd aria-label="Search (Ctrl K)" title="Search  ⌘K">${icon('search')}</button>
       <div class="notif">
         <button type="button" class="icon-btn notif-btn" data-notif-toggle aria-expanded="false" aria-controls="notif-panel" aria-label="Notifications">${icon('bell')}<span class="notif-count" data-notif-count hidden></span></button>
       </div>
@@ -95,6 +97,8 @@ export function mountAppHeader(root) {
     menu.setAttribute('aria-expanded', String(open));
   };
   const onNav = (e) => { if (e.target.closest('#primary-nav a')) { header.dataset.open = 'false'; menu.setAttribute('aria-expanded', 'false'); } };
+  const unbindCmd = bindCommandKey();
+  header.querySelector('[data-cmd]').addEventListener('click', () => openCommand());
   btn.addEventListener('click', onBtn);
   panel.addEventListener('click', onPanel);
   menu.addEventListener('click', onMenu);
@@ -103,6 +107,7 @@ export function mountAppHeader(root) {
   document.addEventListener('keydown', onKey);
   window.addEventListener('ava:data', refreshCount);
   return () => {
+    unbindCmd();
     document.removeEventListener('click', onDoc);
     document.removeEventListener('keydown', onKey);
     window.removeEventListener('ava:data', refreshCount);

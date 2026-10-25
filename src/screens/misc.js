@@ -105,7 +105,7 @@ export const maintenance = {
 // provider. Operator details come from src/content/business.js; a missing
 // detail is left out rather than shown as a placeholder.
 const LEGAL_ENTITY = { name: BUSINESS.legalName, address: BUSINESS.address, privacyEmail: BUSINESS.privacyEmail };
-const PRIVACY_UPDATED = '24 October 2026';
+const PRIVACY_UPDATED = '25 October 2026';
 const contactLine = LEGAL_ENTITY.privacyEmail
   ? html`email <a class="link" href="mailto:${LEGAL_ENTITY.privacyEmail}">${LEGAL_ENTITY.privacyEmail}</a>`
   : html`contact the AVA Verdict team`;
@@ -114,7 +114,8 @@ const PRIVACY = [
   ['What we collect', html`<ul>
     <li><b>Account data:</b> your name, work email, organisation, role and sign-in details. If you sign in with Google, we receive your name and email from Google.</li>
     <li><b>Venture data you submit:</b> descriptions, company details, uploaded documents, and the findings, comments, outcomes and decisions recorded against them.</li>
-    <li><b>Free audit data:</b> your work email and the venture details you enter.</li>
+    <li><b>Free audit data:</b> your work email and the venture details you enter, plus a one-way, salted code derived from your network address so we can limit misuse. We never store the address itself.</li>
+    <li><b>Billing data:</b> if you subscribe, your billing name, address and plan. Card details go directly to our payment provider; AVA never sees or stores them.</li>
     <li><b>Activity and security data:</b> a log of actions taken in your workspace, sign-in events and technical data needed to keep the service secure.</li>
     <li><b>Data in your browser:</b> your sign-in session and display preferences. The public demo workspace stores its sample data only in your browser.</li>
   </ul>`],
@@ -129,7 +130,8 @@ const PRIVACY = [
     <p>We do not use your submitted data to train AI models, and our AI provider does not use it to train its models.</p>
     <p>Scores and directives are calculated by AVA's own rules from the findings. They are decision support for people, not automated decisions with legal or similarly significant effects on you.</p>`],
   ['Who we share it with', html`<p>We share personal data only with:</p><ul>
-    <li><b>Service providers acting as our processors:</b> hosting and infrastructure, database and file storage, a third-party AI model provider, and email delivery.</li>
+    <li><b>Service providers acting as our processors:</b> hosting and infrastructure, database and file storage, a third-party AI model provider, email delivery, error monitoring (technical error details only, never your documents or form content) and a bot check on public forms.</li>
+    <li><b>Our payment provider (Stripe),</b> which processes subscription payments. For payment and fraud-prevention purposes Stripe acts as an independent controller under its own privacy policy.</li>
     <li><b>Members of your organisation,</b> according to their role.</li>
     <li><b>People you choose to share a report with,</b> through a share link you create. You can set a password and expiry, and revoke the link at any time.</li>
     <li><b>Authorities,</b> where the law requires it.</li>
@@ -146,11 +148,12 @@ const PRIVACY = [
     <li><b>Free audit data:</b> deleted 12 months after the audit, unless your organisation signs up and keeps it.</li>
     <li><b>Activity and security records:</b> kept for up to 6 years where needed for legal, accounting or security purposes.</li>
   </ul><p>You can ask us to delete your data sooner, subject to any legal obligation to keep it.</p>`],
-  ['Your rights', html`<p>Under UK data protection law you can ask to access, correct, delete, restrict or transfer your personal data, and object to how we use it. To make a request, ${contactLine}, and we will respond within one month. If you are unhappy with our response, you can complain to the Information Commissioner's Office at ico.org.uk.</p>`],
+  ['Your rights', html`<p>Under UK data protection law you can ask to access, correct, delete, restrict or transfer your personal data, and object to how we use it. You can download your organisation's data and delete your account yourself under Account. For anything else, ${contactLine}, and we will respond within one month. If you are unhappy with our response, you can complain to the Information Commissioner's Office at ico.org.uk.</p>`],
   ['How we protect it', html`<ul>
     <li>Data is encrypted in transit.</li>
     <li>Access inside an organisation is limited by role and enforced in the database itself.</li>
     <li>Passwords are handled by our authentication provider and never stored by AVA in readable form.</li>
+    <li>Two-factor sign-in with an authenticator app is available to every user. Once it is on, the database itself returns nothing to a session that has not passed it.</li>
     <li>Every change to workspace data is logged.</li>
   </ul>`],
   ['Changes to this policy', html`<p>We will post any changes here and update the date below. If a change materially affects how we use your data, we will tell account owners by email.</p>`],
@@ -234,9 +237,15 @@ export const trust = longPage({
     ['Access control', html`<ul>
       <li>Four roles, Owner, Admin, Analyst and Viewer, decide who can see and change what.</li>
       <li>These permissions are enforced in the database itself, not only in the app, so one organisation can never read another's data.</li>
+      <li>Two-factor sign-in with an authenticator app, enforced in the database for every user who turns it on. Any user can sign out of every device at once.</li>
+      <li>Payments are handled by Stripe. Card details never reach AVA.</li>
       <li>Shared reports use links with a password option and an expiry date, can be revoked at any time, and every view is logged.</li>
     </ul>`],
     ['A full record of changes', html`<p>Every change in a workspace is logged: who did it, what changed and when. Dismissing a finding requires a written reason, and the original score is never altered by later decisions.</p>`],
+    ['Your data, your call', html`<ul>
+      <li>Owners and Admins can download everything their organisation holds in AVA as one file, at any time.</li>
+      <li>Any user can delete their account, and an Owner can delete the whole organisation, from Account. Deletion takes effect immediately, including uploaded files.</li>
+    </ul>`],
     ['How the score is calculated', html`<ul>
       <li>Six specialist agents each attack the venture from one angle. They produce findings; they do not set the score.</li>
       <li>The Resilience Score and directive are calculated by AVA's published rules from those findings, so the same findings always produce the same score.</li>

@@ -9,6 +9,7 @@ export function siteFooter({ large = false } = {}) {
       <a href="/team">Team</a>
       <a href="/pricing">Pricing</a>
       <a href="/sign-in">Sign in</a>
+      <a href="/help">Help</a>
       <a href="/trust">Trust centre</a>
       <a href="/privacy">Privacy</a>
       <a href="/terms">Terms</a>

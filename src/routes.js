@@ -18,6 +18,7 @@ import dataRoom from './screens/data-room.js';
 import exportScreen from './screens/export.js';
 import account from './screens/account.js';
 import { shared, invite, noAccess, maintenance, privacy, terms, trust, demo } from './screens/misc.js';
+import help from './screens/help.js';
 
 // layout: 'public' = site header and footer; 'app' = signed-in app header;
 // 'bare' = no chrome.
@@ -31,6 +32,7 @@ export const routes = [
   { path: '/privacy', screen: privacy, layout: 'public' },
   { path: '/terms', screen: terms, layout: 'public' },
   { path: '/trust', screen: trust, layout: 'public' },
+  { path: '/help', screen: help, layout: 'public' },
   { path: '/maintenance', screen: maintenance, layout: 'public' },
   { path: '/shared/:token', screen: shared, layout: 'bare' },
   { path: '/invite/:token', screen: invite, layout: 'public' },

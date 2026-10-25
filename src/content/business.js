@@ -10,6 +10,7 @@ export const BUSINESS = {
   privacyEmail: '', // receives privacy requests
   salesEmail: '', // "Book a walkthrough" and Enterprise enquiries
   billingEmail: '', // plan changes and invoices
+  supportEmail: '', // help with the product, shown on the Help page
 };
 
 // Plans on the pricing page. Audits, seats and Deep audit come from

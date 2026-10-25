@@ -301,3 +301,17 @@ a.card:hover, button.card:hover { border-color: rgba(170, 160, 255, .5); transfo
 .legal-sec p, .legal-sec li { color: var(--text-muted); line-height: 1.65; }
 .legal-sec b { color: var(--text); }
 .legal-sec ul { display: flex; flex-direction: column; gap: .5rem; padding-left: 1.25rem; list-style: disc; }
+
+/* ---------- Help ---------- */
+.help-status { display: flex; align-items: center; gap: .625rem; padding: .75rem 1rem; border-radius: 14px; border: 1px solid var(--line-strong); background: var(--surface); font-size: .9375rem; }
+.help-dot { width: .625rem; height: .625rem; border-radius: 50%; background: var(--text-label); flex: none; }
+.help-status.is-ok .help-dot { background: var(--proceed); box-shadow: 0 0 0 4px var(--proceed-bg); }
+.help-status.is-warn .help-dot { background: var(--hold); box-shadow: 0 0 0 4px var(--hold-bg); }
+.help-steps { list-style: none; display: flex; flex-direction: column; gap: .75rem; }
+.help-steps li { display: grid; grid-template-columns: 2.5rem 1fr; gap: .5rem; padding: 1rem 1.25rem; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
+.help-steps b { color: var(--text); }
+.help-change { display: flex; flex-direction: column; gap: .375rem; }
+.help-change + .help-change { margin-top: .75rem; }
+.help-change ul { padding-left: 1.25rem; }
+.help-contacts { list-style: none; display: flex; flex-direction: column; gap: .5rem; }
+.help-contacts li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .25rem 1rem; }

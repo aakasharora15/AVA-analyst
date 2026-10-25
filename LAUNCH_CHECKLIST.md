@@ -19,6 +19,9 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] 1.14 Apply migration 6 (supabase/migrations/20261024000003_trial.sql): free trial for new organisations (2026-10-24)
 - [x] 1.13 Apply migration 5 (supabase/migrations/20261024000002_plans_deep_audit.sql): Deep audit flag, plan ids, plans change only through billing (2026-10-24)
 - [x] 1.12 Apply migration 4 (supabase/migrations/20261024000001_hide_model.sql): users can no longer read which AI model ran an audit (2026-10-24)
+- [ ] 1.15 Apply migration 7 (supabase/migrations/20261025000001_billing.sql): billing columns, trial end system-only, free audit address limits. Needed before the free audit works on the live site
+- [ ] 1.16 Apply migration 8 (supabase/migrations/20261025000002_mfa.sql): two-factor enforced in the database
+- [ ] 1.17 Authentication → Multi-Factor: confirm TOTP (authenticator app) is enabled (on by default)
 - [~] 1.10 Google sign-in: Google Cloud project "ava-verdict" (dedicated AVA Verdict account), OAuth client "AVA Verdict staging" (External, Testing), Supabase Google provider saved. Remaining: rotate the secret exposed in a screenshot, test once the site URL is set
 - [ ] 1.11 Microsoft sign-in (recommended over Apple for funds and corporates; awaiting decision)
 
@@ -34,6 +37,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] 3.1 Run supabase/cron.sql: ava-advance every minute and ava-email every 5 minutes, both returning 200 (2026-10-24)
 - [ ] 3.2 Resend: verify sending domain, set EMAIL_FROM and RESEND_API_KEY
 - [ ] 3.3 Confirm a test email arrives (invite yourself)
+- [ ] 3.4 Set AVA_OPS_EMAIL so failed audits and deletion clean-ups reach you
 
 ## Stage 4. Staging walkthrough (live mode, real Supabase)
 
@@ -61,9 +65,14 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Stage 6. Build before or soon after first client
 
-- [ ] 6.1 Read Word, PowerPoint and Excel files (decks often arrive as .pptx)
-- [~] 6.2 Billing: new organisations get a 14-day trial (3 audits, 3 seats); audit allowances enforced on the server for every plan (config/plans.json). Remaining: Stripe checkout, plan changes from Stripe, invoices
-- [ ] 6.3 Error monitoring and failed-audit alerts
+- [x] 6.1 Read Word, PowerPoint (with speaker notes) and Excel files in the browser (2026-10-25)
+- [~] 6.2 Billing built (2026-10-25): Stripe Checkout, Customer Portal (plan changes, card, invoices, cancel), signed webhook as the only writer of plan and seats, trial bar and upgrade prompt. Remaining (owner): Stripe account, three products and prices, webhook endpoint, env vars (6.2a below)
+- [ ] 6.2a Stripe setup: create products Basic £29.99, Pro £299, Pro Max £1,499 (monthly); copy price ids to STRIPE_PRICE_*; add webhook https://ava-analyst.vercel.app/api/stripe/webhook for checkout.session.completed, customer.subscription.created/updated/deleted, invoice.payment_failed; set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET; turn on the Customer Portal (allow plan switching between the three prices, cancellation, invoice history)
+- [~] 6.3 Error monitoring and failed-audit alerts built (2026-10-25). Remaining: create a Sentry project, set SENTRY_DSN and VITE_SENTRY_DSN; set AVA_OPS_EMAIL
+- [~] 6.5 Free audit spend protection built (2026-10-25): per-address and daily caps on now. Remaining: Cloudflare Turnstile widget, set VITE_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY
+- [x] 6.6 Data export and deletion: export organisation data, delete account, delete organisation (2026-10-25)
+- [x] 6.7 Two-factor sign-in (authenticator app), sign out everywhere (2026-10-25)
+- [x] 6.8 Search (⌘K), Help page with live status and What's new, first-run checklist (2026-10-25)
 - [ ] 6.4 Internal admin screen for drift reports and holds
 
 ## Stage 7. Launch
@@ -73,6 +82,8 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [ ] 7.3 Switch production to live; first pilot client
 
 ## Log
+
+- 2026-10-25: SaaS foundation: Stripe billing, trial bar and upgrade prompt, free audit limits and bot check, Sentry, ops alerts, data export and deletion, two-factor enforced in the database, Office files, search, Help, first-run checklist. Fixed: plan limit sent users to /running/undefined; an Owner could extend their own trial; live portfolio said "Sample data"; share tokens appeared in the audit log export.
 
 - 2026-10-24: Free usage closed: new organisations start on a 14-day trial with 3 audits; every plan's audit allowance is checked before any model call. Failed or declined audits never count.
 - 2026-10-24: Plans and models: every plan runs the standard engine (Sonnet); Pro Max and Enterprise can run a Deep audit (Opus). Plans change only through billing, enforced in the database.
