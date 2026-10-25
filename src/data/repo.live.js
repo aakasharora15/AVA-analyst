@@ -537,7 +537,8 @@ export async function getAudit(id) {
     getAudits(a.company_id),
     rows(sb.from('sources').select('*').eq('company_id', a.company_id)),
     rows(sb.from('share_links').select('token, audit_id, recipient_email, expires_at, has_password, revoked, created_by, created_at, share_views(viewed_at)').eq('audit_id', id)),
-    rows(sb.from('finding_challenges').select('*').eq('audit_id', id).order('created_at')),
+    // Empty until migration 20261026000001 is applied, rather than breaking the report.
+    rows(sb.from('finding_challenges').select('*').eq('audit_id', id).order('created_at')).catch(() => []),
   ]);
   const audit = all.find((x) => x.id === id);
   const out = enrichAudit(audit, { company: mapCompany(company), sources: sources.map(mapSource), issued: issuedOnly(all) });
