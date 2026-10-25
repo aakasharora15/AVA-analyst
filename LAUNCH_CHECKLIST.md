@@ -14,7 +14,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] 1.5 Apply migration 3: reference data (2026-10-23)
 - [x] 1.6 Verify: run supabase/checks/verify_setup.sql, every row PASS (2026-10-23, 8/8 PASS)
 - [x] 1.7 Auth settings: email confirmation on, password 12+ with upper/lower/digit/symbol, secure password change on, Site URL https://ava-analyst.vercel.app, redirects ava-analyst.vercel.app/** and localhost:5173/** (2026-10-23)
-- [ ] 1.8 Auth emails: custom SMTP (Resend). Blocked on owning a domain: Supabase's built-in email only reaches project team members, so public sign-up needs this
+- [x] 1.8 Auth emails: custom SMTP via Resend (smtp.resend.com, no-reply@avaverdict.com) and the three branded templates from supabase/email-templates pasted in (2026-10-25). Still to do: set Site URL to https://avaverdict.com and add https://avaverdict.com/** to redirects (1.7 lists the old values)
 - [x] 1.9 Enable pg_cron and pg_net (2026-10-23)
 - [x] 1.14 Apply migration 6 (supabase/migrations/20261024000003_trial.sql): free trial for new organisations (2026-10-24)
 - [x] 1.13 Apply migration 5 (supabase/migrations/20261024000002_plans_deep_audit.sql): Deep audit flag, plan ids, plans change only through billing (2026-10-24)
@@ -36,8 +36,8 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 ## Stage 3. Background jobs and email
 
 - [x] 3.1 Run supabase/cron.sql: ava-advance every minute and ava-email every 5 minutes, both returning 200 (2026-10-24)
-- [ ] 3.2 Resend: verify sending domain, set EMAIL_FROM and RESEND_API_KEY
-- [ ] 3.3 Confirm a test email arrives (invite yourself)
+- [x] 3.2 Resend: avaverdict.com verified (Ireland), EMAIL_FROM and RESEND_API_KEY set (2026-10-25)
+- [x] 3.3 Test emails arrive: invite, then every AVA email type via supabase/checks/test_emails.sql, in Gmail and Apple Mail, light and dark (2026-10-25)
 - [ ] 3.4 Set AVA_OPS_EMAIL so failed audits and deletion clean-ups reach you
 
 ## Stage 4. Staging walkthrough (live mode, real Supabase)
@@ -69,8 +69,8 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] 6.1 Read Word, PowerPoint (with speaker notes) and Excel files in the browser (2026-10-25)
 - [~] 6.2 Billing built (2026-10-25): Stripe Checkout, Customer Portal (plan changes, card, invoices, cancel), signed webhook as the only writer of plan and seats, trial bar and upgrade prompt. Remaining (owner): Stripe account, three products and prices, webhook endpoint, env vars (6.2a below)
 - [ ] 6.2a Stripe setup: create products Basic £29.99, Pro £299, Pro Max £1,499 (monthly); copy price ids to STRIPE_PRICE_*; add webhook https://ava-analyst.vercel.app/api/stripe/webhook for checkout.session.completed, customer.subscription.created/updated/deleted, invoice.payment_failed; set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET; turn on the Customer Portal (allow plan switching between the three prices, cancellation, invoice history)
-- [~] 6.3 Error monitoring and failed-audit alerts built (2026-10-25). Remaining: create a Sentry project, set SENTRY_DSN and VITE_SENTRY_DSN; set AVA_OPS_EMAIL
-- [~] 6.5 Free audit spend protection built (2026-10-25): per-address and daily caps on now. Remaining: Cloudflare Turnstile widget, set VITE_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY
+- [~] 6.3 Error monitoring and failed-audit alerts built (2026-10-25). Deferred by the owner until paying customers: create a Sentry project, set SENTRY_DSN and VITE_SENTRY_DSN; set AVA_OPS_EMAIL
+- [~] 6.5 Free audit spend protection built (2026-10-25): per-address and daily caps on now. Deferred by the owner; needed before the free audit is promoted publicly: Cloudflare Turnstile widget, set VITE_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY
 - [x] 6.6 Data export and deletion: export organisation data, delete account, delete organisation (2026-10-25)
 - [x] 6.7 Two-factor sign-in (authenticator app), sign out everywhere (2026-10-25)
 - [x] 6.9 Enterprise verified metrics (2026-10-25): founder link on the 1st, reminder day 7, escalation day 14, client confirms, AVA verifies at /ava-review, alerts on runway under 6 months, revenue down 20%, shut down or acquired. Remaining: set AVA_STAFF_EMAILS (each reviewer turns on two-factor); decide who on the AVA team reviews and how fast (target: within 2 working days)
@@ -84,6 +84,8 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [ ] 7.3 Switch production to live; first pilot client
 
 ## Log
+
+- 2026-10-25: Phase 1 closed. Branded HTML emails (light and dark, following the reader's setting; Gmail always shows light), generated from each email's plain text, which is still sent alongside. Supabase auth emails go through Resend with matching templates. Sentry and Turnstile deferred. Model spend for the phase: US$0.
 
 - 2026-10-25 (strategy doc, section 4): agents now receive price range, delivery mode and known competitors; Deep audit researches with all five agents at 8 searches each; free audit result is emailed as a private link once RESEND_API_KEY is set (until then it shows on the page); free audits older than 12 months are deleted daily unless converted (privacy policy now true); live-mode "Sample data" labels and the Northline link removed; file pickers accept only readable formats.
 
