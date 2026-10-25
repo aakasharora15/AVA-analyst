@@ -85,6 +85,8 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Log
 
+- 2026-10-25 (strategy doc, section 4): agents now receive price range, delivery mode and known competitors; Deep audit researches with all five agents at 8 searches each; free audit result is emailed as a private link once RESEND_API_KEY is set (until then it shows on the page); free audits older than 12 months are deleted daily unless converted (privacy policy now true); live-mode "Sample data" labels and the Northline link removed; file pickers accept only readable formats.
+
 - 2026-10-25: Free trial changed to 7 days, one audit a day (UK calendar day), at most 7 in total; failed or declined audits still never count. Organisations already on a trial keep their original end date. Worst-case model cost per trial: about US$9.
 
 - 2026-10-25: First real audit: 6 min, US$1.26. Running screen rebuilt so people can see the engine work: live clock and time left, agent pipeline with current step, live activity feed of real events and sources found. Free audits capped at 5 a day by default (AVA_FREE_AUDITS_PER_DAY) to protect a small API budget. One finding came back without a source: to fix.

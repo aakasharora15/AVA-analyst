@@ -42,3 +42,19 @@ def test_health_lists_optional_services(api):
     client, _ = api
     checks = client.get("/api/health").json()["checks"]
     assert {"billing", "bot_check", "error_reporting"} <= set(checks)
+
+
+def test_free_audit_result_goes_by_email_when_email_is_on(api, monkeypatch):
+    client, w = api
+    monkeypatch.setenv("RESEND_API_KEY", "re_test")
+    email = f"founder@mail{w['tag']}.example"
+    r = client.post("/api/free-audit", json={"email": email, "company": CO})
+    assert r.status_code == 200 and r.json() == {"emailed": True, "to": email}  # no id for the browser
+    with db.system() as c:
+        fid = c.execute("select id from free_audits where email = %s", (email,)).fetchone()["id"]
+    for _ in range(20):
+        if client.post(f"/api/free-audit/{fid}/advance").json()["audit"]["status"] in ("complete", "partial", "failed"):
+            break
+    with db.system() as c:
+        mail = c.execute("select subject, body from email_outbox where kind = 'free-audit-result' and to_email = %s", (email,)).fetchone()
+    assert mail and "score" in mail["subject"] and f"/free-audit/result/{fid}" in mail["body"]

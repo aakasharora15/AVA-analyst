@@ -1136,6 +1136,10 @@ def free_audit(body: FreeIn, request: Request):
     with db.system("Free audit") as c:
         fid = c.execute("insert into free_audits (email, domain, inputs, audit_id, ip_hash) values (%s, %s, %s, %s, %s) returning id",
                         (body.email.strip().lower(), domain, db.jsonb(body.company.model_dump()), audit_id, ip_hash)).fetchone()["id"]
+    if settings().resend_api_key:
+        # The result goes to the work email as a private link, never to the
+        # browser: that proves the address and keeps one audit per real domain.
+        return {"emailed": True, "to": body.email.strip().lower()}
     return {"id": fid}
 
 
@@ -1218,7 +1222,7 @@ def cron_advance():
 
 @app.get("/api/cron/cadence", dependencies=[Depends(cron_guard)])
 def cron_cadence():
-    return {"queued": scheduling.queue_due(), "metrics": metrics.run_daily()}
+    return {"queued": scheduling.queue_due(), "metrics": metrics.run_daily(), "purged_free_audits": privacy.purge_expired_free_audits()}
 
 
 @app.get("/api/cron/digest", dependencies=[Depends(cron_guard)])

@@ -1,7 +1,7 @@
 import landing from './screens/landing.js';
 import pricing from './screens/pricing.js';
 import team from './screens/team.js';
-import freeAudit from './screens/free-audit.js';
+import freeAudit, { freeAuditResult } from './screens/free-audit.js';
 import signIn from './screens/sign-in.js';
 import onboarding from './screens/onboarding.js';
 import portfolio from './screens/portfolio.js';
@@ -30,6 +30,7 @@ export const routes = [
   { path: '/pricing', screen: { ...pricing, className: 'pricing' }, layout: 'public' },
   { path: '/team', screen: { ...team, className: 'team' }, layout: 'public' },
   { path: '/free-audit', screen: freeAudit, layout: 'public' },
+  { path: '/free-audit/result/:id', screen: freeAuditResult, layout: 'public' },
   { path: '/sign-in', screen: signIn, layout: 'bare' },
   { path: '/privacy', screen: privacy, layout: 'public' },
   { path: '/terms', screen: terms, layout: 'public' },

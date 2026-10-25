@@ -29,6 +29,8 @@ const FAQ = [
 const CHANGES = [
   ['25 October 2026', [
     'The free trial is now 7 days, with one audit a day.',
+    'Your price range, delivery mode and known competitors now feed every agent.',
+    'Deep audit now has all five agents research the web, with twice the searches.',
     'Subscribe and manage billing online: change plan, update your card, download invoices.',
     'Two-factor sign-in with an authenticator app, plus "Sign out everywhere".',
     'AVA now reads Word, PowerPoint (including speaker notes) and Excel files.',

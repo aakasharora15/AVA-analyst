@@ -125,3 +125,22 @@ def delete_user(user: str) -> None:
         delete_org(o["id"])
     with db.system("Account deletion") as c:
         c.execute("delete from auth.users where id = %s", (user,))
+
+
+FREE_AUDIT_RETENTION_MONTHS = 12
+
+
+def purge_expired_free_audits() -> int:
+    """Privacy policy: free audit data is deleted 12 months after the audit,
+    unless the organisation signed up and kept it. Runs daily."""
+    with db.system("Retention") as c:
+        rows = c.execute(
+            "select f.id, a.company_id from free_audits f left join audits a on a.id = f.audit_id "
+            "where f.converted_org is null and f.created_at < now() - make_interval(months => %s)", (FREE_AUDIT_RETENTION_MONTHS,)).fetchall()
+        companies = [r["company_id"] for r in rows if r["company_id"]]
+        if companies:
+            # Deleting the company removes its audit, findings, sources and agent runs (cascade).
+            c.execute("delete from companies where id = any(%s) and org_id = 'free-audits'", (companies,))
+        if rows:
+            c.execute("delete from free_audits where id = any(%s)", ([r["id"] for r in rows],))
+    return len(rows)

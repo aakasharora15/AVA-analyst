@@ -826,7 +826,15 @@ export async function runFreeAudit(input, { onProgress = () => {} } = {}) {
   const check = checkWorkEmail(input.email);
   if (!check.ok) throw new Error(check.reason);
   const company = { title: input.title.trim(), description: input.description.trim(), industry: input.industry, country: input.country.trim() };
-  const { id } = await api('/free-audit', { body: { email: input.email.trim(), company, turnstileToken: input.turnstileToken || '' }, auth: false });
+  const out = await api('/free-audit', { body: { email: input.email.trim(), company, turnstileToken: input.turnstileToken || '' }, auth: false });
+  // With email on, the result goes to the work email as a private link.
+  if (out.emailed) return { emailed: true, to: out.to };
+  const r = await followFreeAudit(out.id, onProgress);
+  return { ...r, inputs: input };
+}
+
+/** Drives a free audit to the end and returns its result (also used by the emailed link). */
+async function followFreeAudit(id, onProgress = () => {}) {
   for (let i = 0; i < 30; i += 1) {
     const st = await api(`/free-audit/${id}/advance`, { auth: false });
     onProgress(Math.min(AGENTS.length - 1, st.agents.filter((x) => x.status === 'complete' || x.status === 'failed').length));
@@ -838,7 +846,14 @@ export async function runFreeAudit(input, { onProgress = () => {} } = {}) {
       ? `No score issued. ${r.reason} This did not use up your free audit; add the detail and run it again.`
       : 'The audit could not finish. You have not used your free audit; try again later.');
   }
-  return { id, inputs: input, status: r.status, score: r.score, directive: r.directive, top: r.top, locked: r.locked, prototype: false };
+  return { id, inputs: r.company, status: r.status, score: r.score, directive: r.directive, top: r.top, locked: r.locked, prototype: false };
+}
+
+export async function getFreeAuditResult(id, { onProgress = () => {} } = {}) { return followFreeAudit(id, onProgress); }
+
+/** True when free audit results are sent by email (an email provider is set up). */
+export async function freeAuditByEmail() {
+  try { return !!(await api('/health', { method: 'GET', auth: false })).checks.email_provider; } catch { return false; }
 }
 
 export async function sendFreeAudit(id, to) { await api(`/free-audit/${id}/send`, { body: { to }, auth: false }); }

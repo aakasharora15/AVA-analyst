@@ -393,12 +393,31 @@ def _notify(audit_id: str, a: dict, company: dict, st: str, result: dict) -> Non
         emailer.queue(c, a["org_id"], p["email"], subject, body, "audit-complete")
 
 
+def _email_free_result(c, f: dict, st: str, result: dict, a: dict) -> None:
+    """The free audit's result, sent to the work email that asked for it."""
+    title = (f["inputs"] or {}).get("title") or "your venture"
+    link = f"{settings().app_url}/free-audit/result/{f['id']}"
+    if st == "failed":
+        rs = c.execute("select run_state from audits where id = %s", (a["id"],)).fetchone()["run_state"] or {}
+        reason = rs.get("reason") if rs.get("outcome") == "insufficient_information" else None
+        subject = f"Your free AVA audit of {title}: no score issued"
+        body = ((f"AVA could not score {title}. {reason}\n\n" if reason else f"The audit of {title} could not finish.\n\n")
+                + "This did not use up your free audit. Add more detail and run it again: " + f"{settings().app_url}/free-audit")
+    else:
+        subject = f"Your free AVA audit of {title}: {result['finalDirective']}, score {result['score']}"
+        body = (f"Your free audit of {title} is ready.\n\nResilience Score {result['score']} of 100. Directive {result['finalDirective']}.\n\n"
+                f"Read your top three findings: {link}\n\nThe link is private to you.")
+    emailer.queue(c, None, f["email"], subject, body, "free-audit-result")
+
+
 def _after(a: dict, company: dict, org: dict, st: str, result: dict) -> None:
     from .scheduling import next_run_for
     with db.system() as c:
         c.execute("update companies set next_run = %s where id = %s", (next_run_for(company, org), company["id"]))
         if a["org_id"] == FREE_ORG:
-            c.execute("update free_audits set status = %s where audit_id = %s", (st, a["id"]))
+            f = c.execute("update free_audits set status = %s where audit_id = %s returning id, email, inputs", (st, a["id"])).fetchone()
+            if f and settings().resend_api_key:
+                _email_free_result(c, f, st, result, a)
 
 
 def status(audit_id: str) -> dict:

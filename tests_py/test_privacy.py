@@ -58,3 +58,22 @@ def test_sole_owner_deleting_account_removes_their_organisation(api):
     assert client.request("DELETE", "/api/me", json={"confirm": "DELETE"}, headers=as_(w, "Owner")).status_code == 200
     with db.system() as c:
         assert not c.execute("select 1 from organisations where id = %s", (w["org"],)).fetchone()
+
+
+def test_free_audits_are_deleted_after_twelve_months(api):
+    client, w = api
+    from ava_server import privacy
+    co = {"title": "Oldco", "description": "Clinic software that books physiotherapy appointments for private practices in the UK, paid monthly per clinician, with 40 paying clinics today.", "industry": "Healthcare", "country": "United Kingdom"}
+    old = client.post("/api/free-audit", json={"email": f"a@old{w['tag']}.example", "company": co}).json()["id"]
+    kept = client.post("/api/free-audit", json={"email": f"a@kept{w['tag']}.example", "company": co}).json()["id"]
+    new = client.post("/api/free-audit", json={"email": f"a@new{w['tag']}.example", "company": co}).json()["id"]
+    with db.system() as c:
+        c.execute("update free_audits set created_at = now() - interval '13 months' where id = any(%s)", ([old, kept],))
+        c.execute("update free_audits set converted_org = %s where id = %s", (w["org"], kept))
+        old_company = c.execute("select a.company_id from free_audits f join audits a on a.id = f.audit_id where f.id = %s", (old,)).fetchone()["company_id"]
+    assert privacy.purge_expired_free_audits() >= 1
+    with db.system() as c:
+        left = {r["id"] for r in c.execute("select id from free_audits where id = any(%s)", ([old, kept, new],)).fetchall()}
+        assert left == {kept, new}
+        assert not c.execute("select 1 from companies where id = %s", (old_company,)).fetchone()
+        assert not c.execute("select 1 from audits where company_id = %s", (old_company,)).fetchone()

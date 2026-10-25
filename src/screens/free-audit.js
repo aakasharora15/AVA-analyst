@@ -1,5 +1,5 @@
 import { html } from '../lib/html.js';
-import { checkWorkEmail, runFreeAudit, sendFreeAudit } from '../data/repo.js';
+import { checkWorkEmail, runFreeAudit, sendFreeAudit, getFreeAuditResult, freeAuditByEmail } from '../data/repo.js';
 import { humanCheckOn, mountHumanCheck } from '../lib/turnstile.js';
 import { inputProblem } from '../data/shared.js';
 import { BUSINESS, contactHref } from '../content/business.js';
@@ -38,11 +38,17 @@ function resultView(r) {
 </form>`;
 }
 
+function inboxView(to) {
+  return html`<div class="hero-panel fa-wait" role="status"><div class="stars" aria-hidden="true"></div><span class="lbl">Audit running</span><div class="hero-dir">Check your inbox</div><p class="small">Six agents are attacking the venture now. In about six minutes we will email the result to <b>${to}</b> as a private link. You can close this page.</p></div>`;
+}
+
 export default {
   title: 'Free audit · AVA',
   className: 'free-audit',
 
-  render() {
+  async load() { return { byEmail: await freeAuditByEmail() }; },
+
+  render(ctx, d = {}) {
     return html`
 <div class="fa">
   <section class="fa-intro">
@@ -60,7 +66,7 @@ export default {
         <div class="fld"><label for="fa-ind">Industry</label><select id="fa-ind" name="industry" class="inp" aria-describedby="fa-e-industry"><option value="">Choose one</option>${INDUSTRIES.map((i) => html`<option>${i}</option>`)}</select><span class="err" id="fa-e-industry" data-e="industry"></span></div>
         <div class="fld"><label for="fa-cty">Country</label><input id="fa-cty" name="country" class="inp" autocomplete="country-name" aria-describedby="fa-e-country"><span class="err" id="fa-e-country" data-e="country"></span></div>
       </div>
-      <div class="fld"><label for="fa-mail">Work email</label><input id="fa-mail" name="email" type="email" class="inp" autocomplete="email" aria-describedby="fa-e-email fa-mail-h"><span class="err" id="fa-e-email" data-e="email"></span><span class="hint" id="fa-mail-h">We send your result here. Free email addresses are not accepted.</span></div>
+      <div class="fld"><label for="fa-mail">Work email</label><input id="fa-mail" name="email" type="email" class="inp" autocomplete="email" aria-describedby="fa-e-email fa-mail-h"><span class="err" id="fa-e-email" data-e="email"></span><span class="hint" id="fa-mail-h">${d.byEmail ? 'We email your result here as a private link. Free email addresses are not accepted.' : 'Free email addresses are not accepted. Your result appears on this page.'}</span></div>
       ${humanCheckOn ? html`<div class="fld"><div class="fa-human" data-human></div><span class="err" data-e-human role="alert"></span></div>` : ''}
       <button type="submit" class="btn btn-primary btn-lg">Run free audit</button>
       <p class="hint">Your submission is used only to produce this audit and is never used to train AI models. <a class="link" href="/privacy">Privacy policy</a></p>
@@ -123,6 +129,7 @@ export default {
       paint(0);
       try {
         const r = await runFreeAudit(v, { onProgress: paint });
+        if (r.emailed) { out.innerHTML = String(inboxView(r.to)); form.reset(); btn.disabled = false; return; }
         result = r;
         out.innerHTML = String(resultView(r));
         out.querySelector('.hero-panel').scrollIntoView({ block: 'nearest' });
@@ -143,5 +150,34 @@ export default {
       } catch (err) { toast(err.message); }
     }, { signal: ac.signal });
     return () => { ac.abort(); human.then((h) => h && h.remove()); };
+  },
+};
+
+// The private result page the email links to: /free-audit/result/:id.
+export const freeAuditResult = {
+  title: 'Your free audit · AVA',
+  className: 'free-audit',
+
+  render() {
+    return html`<div class="fa fa-result-page"><section class="fa-result" aria-live="polite" data-result><div class="hero-panel fa-wait"><div class="stars" aria-hidden="true"></div><span class="lbl">Loading your result</span><div class="hero-num run-pending">--</div></div></section></div>`;
+  },
+
+  mount(root, ctx) {
+    const ac = new AbortController();
+    const out = root.querySelector('[data-result]');
+    let result = null;
+    const paint = (i) => {
+      out.innerHTML = String(html`<div class="hero-panel fa-wait"><div class="stars" aria-hidden="true"></div><span class="lbl">Still running · ${i + 1} of 6</span><div class="hero-dir">${AGENTS[i].name}</div><div class="run-prog"><span style="width:${Math.round(((i + 1) / 6) * 100)}%"></span></div></div>`);
+    };
+    getFreeAuditResult(ctx.params.id, { onProgress: paint })
+      .then((r) => { result = r; if (!ac.signal.aborted) out.innerHTML = String(resultView(r)); })
+      .catch((err) => { if (!ac.signal.aborted) out.innerHTML = String(html`<div class="banner banner-bad" role="alert"><b>${err.message}</b><a class="btn" href="/free-audit">Run a free audit</a></div>`); });
+    out.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = out.querySelector('#fa-inv');
+      if (!result || !/^\S+@\S+\.\S+$/.test(input.value.trim())) { input.setAttribute('aria-invalid', 'true'); input.focus(); toast('Enter the investor\'s email.'); return; }
+      try { await sendFreeAudit(result.id, input.value.trim()); toast(`Result sent to ${input.value.trim()}.`); input.value = ''; } catch (err) { toast(err.message); }
+    }, { signal: ac.signal });
+    return () => ac.abort();
   },
 };

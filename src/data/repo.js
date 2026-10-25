@@ -132,6 +132,8 @@ export const existingTitles = (...a) => impl().existingTitles(...a);
 export const importCompanies = (...a) => impl().importCompanies(...a);
 export const runFreeAudit = (...a) => primary.runFreeAudit(...a);
 export const sendFreeAudit = (...a) => primary.sendFreeAudit(...a);
+export const getFreeAuditResult = (...a) => primary.getFreeAuditResult(...a);
+export const freeAuditByEmail = (...a) => primary.freeAuditByEmail(...a);
 export const getAuditLog = (...a) => impl().getAuditLog(...a);
 export const recordExport = (...a) => impl().recordExport(...a);
 export const resetDemo = (...a) => impl().resetDemo(...a);

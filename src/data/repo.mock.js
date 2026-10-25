@@ -758,6 +758,8 @@ export async function runFreeAudit(input, { onProgress = () => {} } = {}) {
 }
 
 export async function sendFreeAudit() {}
+export async function getFreeAuditResult() { throw new Error('This link is not valid. Run a new free audit.'); }
+export async function freeAuditByEmail() { return false; }
 
 // ---------------------------------------------------------------------------
 // Audit log (spec 4.10)
